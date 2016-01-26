@@ -1,0 +1,16 @@
+[
+{
+  "modid": "panostream",
+  "name": "PanoStream Mod",
+  "description": "A Mod that allows livestreaming of 360° footage to YouTube.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["CrushedPixel", "johni0702"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
