@@ -1,0 +1,10 @@
+{
+  "required": true,
+  "package": "com.replaymod.panostream.mixin",
+  "mixins": [
+    //nothing here yet
+  ],
+  "server": [],
+  "client": [],
+  "refmap": "mixins.panostream.refmap.json"
+}

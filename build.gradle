@@ -1,43 +1,62 @@
-/*
-// For those who want the bleeding edge
 buildscript {
     repositories {
-        jcenter()
+        mavenCentral()
         maven {
             name = "forge"
             url = "http://files.minecraftforge.net/maven"
         }
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
     }
     dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:2.0-SNAPSHOT'
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
     }
 }
-apply plugin: 'net.minecraftforge.gradle.forge'
-*/
 
-// for people who want stable
-plugins {
-    id "net.minecraftforge.gradle.forge" version "2.0.1"
+apply plugin: 'forge'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+version = "0.1"
+group= "com.replaymod.panostream"
+archivesBaseName = "panostream"
+
+ext {
+    mixinSrg = new File(project.buildDir, 'tmp/mixins/mixins.srg')
+    mixinRefMap = new File(project.buildDir, 'tmp/mixins/mixins.replaymod.refmap.json')
+    libFiles = fileTree(dir: 'libs', includes: ['*.jar'])
 }
 
-version = "1.0"
-group= "com.yourname.modid" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
-archivesBaseName = "modid"
-
 minecraft {
-    version = "1.8-11.14.3.1521"
-    runDir = "run"
+    version = "1.8-11.14.3.1450"
+    runDir = "eclipse"
     
     // the mappings can be changed at any time, and must be in the following format.
     // snapshot_YYYYMMDD   snapshot are built nightly.
     // stable_#            stables are built at the discretion of the MCP team.
     // Use non-default mappings at your own risk. they may not allways work.
     // simply re-run your setup task after changing the mappings to update your workspace.
-    mappings = "snapshot_20141130"
-    // makeObfSourceJar = false // an Srg named sources jar is made by default. uncomment this to disable.
+    mappings = "snapshot_nodoc_20141130"
+}
+
+repositories {
+    maven {
+        name = "SpongePowered Repo"
+        url = "http://repo.spongepowered.org/maven/"
+    }
 }
 
 dependencies {
+    compile 'org.projectlombok:lombok:1.16.4'
+
+    compile 'org.spongepowered:mixin:0.4.3'
+    compile libFiles
+
+    compile 'org.aspectj:aspectjrt:1.8.2'
+
     // you may put jars on which you depend on in ./libs
     // or you may define them like so..
     //compile "some.group:artifact:version:classifier"
@@ -47,18 +66,57 @@ dependencies {
     //compile 'com.mod-buildcraft:buildcraft:6.0.8:dev'  // adds buildcraft to the dev env
     //compile 'com.googlecode.efficient-java-matrix-library:ejml:0.24' // adds ejml to the dev env
 
-    // the 'provided' configuration is for optional dependencies that exist at compile-time but might not at runtime.
-    //provided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-
-    // the deobf configurations:  'deobfCompile' and 'deobfProvided' are the same as the normal compile and provided,
-    // except that these dependencies get remapped to your current MCP mappings
-    //deobfCompile 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-    //deobfProvided 'com.mod-buildcraft:buildcraft:6.0.8:dev'
-
     // for more info...
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
 
+}
+
+jar {
+    dependsOn configurations.compile
+
+    from project.mixinRefMap
+
+    def shade = {libFiles + files(configurations.compile.findAll { c ->
+        ['mixin', 'isoparser', 'aspectjrt'].any {c.name.startsWith("$it-")}
+    })}
+
+    def noticeDir = file("$buildDir/NOTICE")
+    doFirst {
+        noticeDir.deleteDir()
+        noticeDir.mkdirs()
+        shade().collect { it.isDirectory() ? fileTree(it) : zipTree(it) }.each {
+            it.matching { include '**/NOTICE*' }.each {
+                new File(noticeDir, 'NOTICE.txt') << it.getText('UTF-8') + '\n'
+            }
+        }
+    }
+    from noticeDir
+
+    from ({shade().collect { it.isDirectory() ? it : zipTree(it) }}) {
+        exclude '**/NOTICE*'
+    }
+
+    manifest { 
+         attributes 'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
+                 'TweakOrder': '0',
+                 'MixinConfigs': 'mixins.panostream.json',
+                 'FMLCorePlugin': 'com.replaymod.panostream.coremod.LoadingPlugin',
+                 'FMLAT': 'panostream_at.cfg'
+	}
+}
+
+def getGitCommitHash() {
+    try {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            commandLine 'git', 'describe', '--always', '--dirty=*'
+            standardOutput = stdout
+        }
+        return stdout.toString().trim()
+    } catch (e) {
+        return "unknown"
+    }
 }
 
 processResources
@@ -72,7 +130,7 @@ processResources
         include 'mcmod.info'
                 
         // replace version and mcversion
-        expand 'version':project.version, 'mcversion':project.minecraft.version
+        expand 'version':project.version + '-' + getGitCommitHash(), 'mcversion':project.minecraft.version
     }
         
     // copy everything else, thats not the mcmod.info
@@ -81,9 +139,33 @@ processResources
     }
 }
 
-//asset fix for IntelliJ
-idea {
-    module {
-        inheritOutputDirs = true
+sourceSets {
+    main { output.resourcesDir = output.classesDir }
+}
+
+reobf.doFirst {
+    if (project.mixinSrg.exists()) {
+        addExtraSrgFile project.mixinSrg
     }
 }
+
+task copySrgs(type: Copy, dependsOn: 'genSrgs') {
+    from plugins.getPlugin('forge').delayedFile('{SRG_DIR}')
+
+    include '**/*.srg'
+    into 'build/srgs'
+}
+
+setupDecompWorkspace.dependsOn copySrgs
+setupDevWorkspace.dependsOn copySrgs
+compileJava.dependsOn copySrgs
+
+compileJava {
+    options.compilerArgs += [
+            "-AoutSrgFile=${project.mixinSrg.canonicalPath}",
+            "-AoutRefMapFile=${project.mixinRefMap.canonicalPath}",
+            "-AreobfSrgFile=${project.file('build/srgs/mcp-srg.srg').canonicalPath}"
+    ]
+}
+
+defaultTasks 'build'
