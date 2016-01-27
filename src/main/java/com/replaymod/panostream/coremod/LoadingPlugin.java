@@ -12,11 +12,14 @@ import java.net.URL;
 import java.security.CodeSource;
 import java.util.Map;
 
+//to enable coremods and mixins in the development environment, add the following parameters
+//to the VM parameters of the "Minecraft Client" run configuration:
+//-Dfml.coreMods.load=com.replaymod.panostream.coremod.LoadingPlugin
 public class LoadingPlugin implements IFMLLoadingPlugin {
 
     public LoadingPlugin() {
         MixinBootstrap.init();
-        MixinEnvironment.getDefaultEnvironment().addConfiguration("mixins.replaymod.json");
+        MixinEnvironment.getDefaultEnvironment().addConfiguration("mixins.panostream.json");
 
         CodeSource codeSource = getClass().getProtectionDomain().getCodeSource();
         if (codeSource != null) {
