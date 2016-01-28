@@ -1,7 +1,7 @@
 package com.replaymod.panostream;
 
 import lombok.Getter;
-import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 
@@ -13,12 +13,14 @@ public class PanoStreamMod {
     @Mod.Instance(value = MODID)
     public static PanoStreamMod instance;
 
+    private final Minecraft mc = Minecraft.getMinecraft();
+
     @Getter
-    private PanoramicFrameCapturer panoramicFrameCapturer = new PanoramicFrameCapturer(1024);
+    private PanoramicFrameCapturer panoramicFrameCapturer;
 
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
-        FMLCommonHandler.instance().bus().register(panoramicFrameCapturer);
+        panoramicFrameCapturer = new PanoramicFrameCapturer(1024).register();
         panoramicFrameCapturer.setActive(true);
     }
 
