@@ -1,10 +1,13 @@
 package com.replaymod.panostream;
 
+import com.replaymod.panostream.gui.EmptyGuiScreen;
+import com.replaymod.panostream.utils.ScaledResolutionUtil;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.FMLCommonHandler;
@@ -24,8 +27,11 @@ public class PanoramicFrameCapturer {
     @Getter
     private Orientation orientation;
 
+    private final EmptyGuiScreen emptyGuiScreen = new EmptyGuiScreen();
+
     public PanoramicFrameCapturer(int frameSize) {
         panoramicFrame = new PanoramicFrame(frameSize);
+        ScaledResolutionUtil.setWorldAndResolution(emptyGuiScreen, frameSize, frameSize);
     }
 
     public PanoramicFrameCapturer register() {
@@ -36,6 +42,7 @@ public class PanoramicFrameCapturer {
 
     public void setFrameSize(int frameSize) {
         panoramicFrame.setFrameSize(frameSize);
+        ScaledResolutionUtil.setWorldAndResolution(emptyGuiScreen, frameSize, frameSize);
     }
 
     @SubscribeEvent
@@ -50,6 +57,8 @@ public class PanoramicFrameCapturer {
 
         mc.displayWidth = mc.displayHeight = panoramicFrame.getFrameSize();
 
+        ScaledResolutionUtil.setWorldAndResolution(mc.currentScreen);
+
         for(int i=0; i<6; i++) {
             orientation = Orientation.values()[i];
 
@@ -62,6 +71,7 @@ public class PanoramicFrameCapturer {
             GlStateManager.enableTexture2D();
 
             renderWorld();
+            renderOverlays();
 
             panoramicFrame.unbindFramebuffer();
             GlStateManager.popMatrix();
@@ -78,6 +88,8 @@ public class PanoramicFrameCapturer {
         mc.displayWidth = widthBefore;
         mc.displayHeight = heightBefore;
 
+        ScaledResolutionUtil.setWorldAndResolution(mc.currentScreen);
+
         mc.getFramebuffer().bindFramebuffer(true);
         OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
 
@@ -93,10 +105,32 @@ public class PanoramicFrameCapturer {
         mc.entityRenderer.renderWorldPass(2, mc.timer.elapsedPartialTicks, 0);
     }
 
+    private void renderOverlays() {
+        if(this.mc.gameSettings.hideGUI && this.mc.currentScreen == null) return;
+
+        //if a GuiScreen is opened, render the default overlay on the other sides
+        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
+        
+        if(orientation != Orientation.FRONT) {
+            if(mc.currentScreen != null) {
+                GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
+                mc.entityRenderer.setupOverlayRendering();
+                ForgeHooksClient.drawScreen(emptyGuiScreen, 0, 0, 0);
+            }
+        } else {
+            this.mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
+            if(mc.currentScreen != null) {
+                GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
+                ForgeHooksClient.drawScreen(mc.currentScreen, 0, 0, 0);
+            }
+        }
+    }
+
     @SubscribeEvent
     public void onRenderHand(RenderHandEvent event) {
         //don't render the hand in every frame
-        if(active && orientation != null) event.setCanceled(true);
+        if(active && orientation != null && orientation != Orientation.FRONT) event.setCanceled(true);
     }
 
     public enum Orientation {

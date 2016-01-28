@@ -2,7 +2,9 @@
   "required": true,
   "package": "com.replaymod.panostream.mixin",
   "mixins": [
-    "MixinEntityRenderer"
+    "MixinEntityRenderer",
+    "MixinGuiIngame",
+    "MixinGuiScreen"
   ],
   "server": [],
   "client": [],

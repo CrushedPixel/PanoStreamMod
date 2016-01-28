@@ -3,6 +3,7 @@ package com.replaymod.panostream;
 import com.replaymod.panostream.shader.Program;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.crash.CrashReport;
@@ -103,5 +104,9 @@ public class PanoramicFrame {
         shaderProgram.stopUsing();
 
         composedFramebuffer.unbindFramebuffer();
+
+        //for development purposes
+        if(GuiScreen.isCtrlKeyDown())
+            ScreenShotHelper.saveScreenshot(Minecraft.getMinecraft().mcDataDir, 0, 0, composedFramebuffer);
     }
 }
