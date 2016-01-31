@@ -5,6 +5,7 @@ import com.replaymod.panostream.utils.ScaledResolutionUtil;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraftforge.client.ForgeHooksClient;
@@ -27,6 +28,9 @@ public class PanoramicFrameCapturer {
     @Getter
     private Orientation orientation;
 
+    @Getter
+    private boolean distortGUI = false;
+
     private final EmptyGuiScreen emptyGuiScreen = new EmptyGuiScreen();
 
     public PanoramicFrameCapturer(int frameSize) {
@@ -47,8 +51,8 @@ public class PanoramicFrameCapturer {
 
     @SubscribeEvent
     public void capturePanoramicFrame(TickEvent.RenderTickEvent event) {
-        if(mc.theWorld == null) return;
         if(!active) return;
+        if(mc.currentScreen instanceof GuiMainMenu) return; //TODO: handle GuiMainMenu
         if(event.phase != TickEvent.Phase.END) return;
 
         //when rendering is finished, we render the six perspectives
@@ -57,46 +61,29 @@ public class PanoramicFrameCapturer {
 
         mc.displayWidth = mc.displayHeight = panoramicFrame.getFrameSize();
 
-        ScaledResolutionUtil.setWorldAndResolution(mc.currentScreen);
-
         for(int i=0; i<6; i++) {
             orientation = Orientation.values()[i];
 
-            GlStateManager.pushMatrix();
             panoramicFrame.bindFramebuffer(i);
-
-            panoramicFrame.getFramebuffer(i).bindFramebufferTexture();
-
-            GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-            GlStateManager.enableTexture2D();
 
             renderWorld();
             renderOverlays();
 
             panoramicFrame.unbindFramebuffer();
-            GlStateManager.popMatrix();
         }
-        GlStateManager.pushMatrix();
-
-        GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-        GlStateManager.enableTexture2D();
 
         panoramicFrame.composeEquirectangular();
-
-        GlStateManager.popMatrix();
 
         mc.displayWidth = widthBefore;
         mc.displayHeight = heightBefore;
 
-        ScaledResolutionUtil.setWorldAndResolution(mc.currentScreen);
-
-        mc.getFramebuffer().bindFramebuffer(true);
         OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
 
         orientation = null; //disable the orientation so MC renders the frame normally next time
     }
 
     private void renderWorld() {
+        if(mc.theWorld == null) return;
         //rendering the world with as little overweight function calls as possible
         GlStateManager.enableDepth();
         GlStateManager.enableAlpha();
@@ -110,8 +97,6 @@ public class PanoramicFrameCapturer {
 
         //if a GuiScreen is opened, render the default overlay on the other sides
         GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
-        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-        
         if(orientation != Orientation.FRONT) {
             if(mc.currentScreen != null) {
                 GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
@@ -119,8 +104,11 @@ public class PanoramicFrameCapturer {
                 ForgeHooksClient.drawScreen(emptyGuiScreen, 0, 0, 0);
             }
         } else {
-            this.mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
+            if(mc.thePlayer != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
             if(mc.currentScreen != null) {
+                distortGUI = true;
+                mc.entityRenderer.setupOverlayRendering(); //re-setup overlay rendering with distortion enabled
+                distortGUI = false;
                 GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
                 ForgeHooksClient.drawScreen(mc.currentScreen, 0, 0, 0);
             }
@@ -132,6 +120,27 @@ public class PanoramicFrameCapturer {
         //don't render the hand in every frame
         if(active && orientation != null && orientation != Orientation.FRONT) event.setCanceled(true);
     }
+
+    /* Maybe we'll want to capture the GUI only on a separate Framebuffer later
+    @SubscribeEvent
+    public void onRenderGui(GuiScreenEvent.DrawScreenEvent event) {
+        //render the Gui on the PanoramicFrameCapturer's Gui Framebuffer
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getPanoramicFrameCapturer();
+
+        if(capturer.isActive() && capturer.getOrientation() == null) {
+            Framebuffer framebuffer = capturer.getGuiFramebuffer();
+            if(framebuffer.framebufferWidth != mc.displayWidth || framebuffer.framebufferHeight != mc.displayHeight) {
+                framebuffer.createBindFramebuffer(mc.displayWidth, mc.displayHeight);
+            } else {
+                framebuffer.bindFramebuffer(true);
+            }
+
+            event.gui.drawScreen(event.mouseX, event.mouseY, event.renderPartialTicks);
+
+            mc.getFramebuffer().bindFramebuffer(true);
+        }
+    }
+    */
 
     public enum Orientation {
         FRONT, BACK, LEFT, RIGHT, BOTTOM, TOP;
