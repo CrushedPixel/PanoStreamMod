@@ -1,5 +1,8 @@
 package com.replaymod.panostream;
 
+import com.replaymod.panostream.capture.PanoramicFrameCapturer;
+import com.replaymod.panostream.stream.VideoStreamer;
+import com.replaymod.panostream.utils.FrameSizeUtil;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.fml.common.Mod;
@@ -10,6 +13,11 @@ public class PanoStreamMod {
 
     public static final String MODID = "panostream";
 
+    public static final int DEFAULT_FPS = 30;
+    public static final int DEFAULT_FRAMESIZE = 1080; //for 4k
+    //public static final String DEFAULT_DESTINATION = "udp://localhost:9001";
+    public static final String DEFAULT_DESTINATION = "equi.mp4";
+
     @Mod.Instance(value = MODID)
     public static PanoStreamMod instance;
 
@@ -18,10 +26,13 @@ public class PanoStreamMod {
     @Getter
     private PanoramicFrameCapturer panoramicFrameCapturer;
 
+    @Getter
+    private VideoStreamer videoStreamer;
+
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
-        panoramicFrameCapturer = new PanoramicFrameCapturer(1024).register();
-        panoramicFrameCapturer.setActive(true);
+        videoStreamer = new VideoStreamer(FrameSizeUtil.composedFrameSize(DEFAULT_FRAMESIZE), DEFAULT_FPS, DEFAULT_DESTINATION);
+        panoramicFrameCapturer = new PanoramicFrameCapturer(DEFAULT_FRAMESIZE, videoStreamer).register();
     }
 
 }

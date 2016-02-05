@@ -1,7 +1,7 @@
 package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.PanoStreamMod;
-import com.replaymod.panostream.PanoramicFrameCapturer;
+import com.replaymod.panostream.capture.PanoramicFrameCapturer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.EntityRenderer;

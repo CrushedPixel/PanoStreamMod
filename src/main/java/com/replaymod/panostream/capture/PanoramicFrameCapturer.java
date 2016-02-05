@@ -1,20 +1,24 @@
-package com.replaymod.panostream;
+package com.replaymod.panostream.capture;
 
 import com.replaymod.panostream.gui.EmptyGuiScreen;
+import com.replaymod.panostream.stream.VideoStreamer;
+import com.replaymod.panostream.utils.FrameSizeUtil;
 import com.replaymod.panostream.utils.ScaledResolutionUtil;
 import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.common.network.FMLNetworkEvent;
 import org.lwjgl.opengl.GL11;
+
+import java.io.IOException;
 
 
 public class PanoramicFrameCapturer {
@@ -22,7 +26,10 @@ public class PanoramicFrameCapturer {
     private final Minecraft mc = Minecraft.getMinecraft();
     private PanoramicFrame panoramicFrame;
 
-    @Getter @Setter
+    @Getter
+    private final VideoStreamer videoStreamer;
+
+    @Getter
     private boolean active;
 
     @Getter
@@ -33,7 +40,8 @@ public class PanoramicFrameCapturer {
 
     private final EmptyGuiScreen emptyGuiScreen = new EmptyGuiScreen();
 
-    public PanoramicFrameCapturer(int frameSize) {
+    public PanoramicFrameCapturer(int frameSize, VideoStreamer videoStreamer) {
+        this.videoStreamer = videoStreamer;
         panoramicFrame = new PanoramicFrame(frameSize);
         ScaledResolutionUtil.setWorldAndResolution(emptyGuiScreen, frameSize, frameSize);
     }
@@ -46,7 +54,28 @@ public class PanoramicFrameCapturer {
 
     public void setFrameSize(int frameSize) {
         panoramicFrame.setFrameSize(frameSize);
+        videoStreamer.setFrameSize(FrameSizeUtil.composedFrameSize(frameSize));
         ScaledResolutionUtil.setWorldAndResolution(emptyGuiScreen, frameSize, frameSize);
+    }
+
+    public void start() throws IOException{
+        videoStreamer.startStream();
+        active = true;
+    }
+
+    public void stop() {
+        videoStreamer.stopStream();
+        active = false;
+    }
+
+    @SubscribeEvent
+    public void joinWorldEvent(EntityJoinWorldEvent event) throws IOException {
+        if(!active) start();
+    }
+
+    @SubscribeEvent
+    public void leaveWorld(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
+        if(active) stop();
     }
 
     @SubscribeEvent
@@ -74,10 +103,10 @@ public class PanoramicFrameCapturer {
 
         panoramicFrame.composeEquirectangular();
 
+        if(videoStreamer.isActive()) videoStreamer.writeFrameToStream(panoramicFrame);
+
         mc.displayWidth = widthBefore;
         mc.displayHeight = heightBefore;
-
-        OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
 
         orientation = null; //disable the orientation so MC renders the frame normally next time
     }

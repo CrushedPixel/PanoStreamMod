@@ -19,7 +19,7 @@ uniform sampler2D topTex;
 
 void main() {
     float x = gl_TexCoord[0].x;
-    float y = gl_TexCoord[0].y;
+    float y = 1.0 - gl_TexCoord[0].y; //flip the image
 
     float yaw = PI * 2.0 * x;
     int piQuarter = int(8.0 * x) - 4;
