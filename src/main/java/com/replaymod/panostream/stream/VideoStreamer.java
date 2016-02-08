@@ -13,13 +13,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class VideoStreamer {
+
+    private static final int MAX_FRAME_BUFFER = 5;
 
     private Process ffmpegProcess;
 
@@ -28,7 +32,7 @@ public class VideoStreamer {
     private String ffmpegCommand = "ffmpeg";
 
     @Setter
-    private String ffmpegArguments = "-y -f rawvideo -pix_fmt rgb24 -s %WIDTH%x%HEIGHT% -r %FPS% -i - -an \"%DESTINATION%\"";
+    private String ffmpegArguments = "-y -f rawvideo -pix_fmt rgb24 -s %WIDTH%x%HEIGHT% -i - -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p -f mpegts \"%DESTINATION%\"";
 
     private ReadableDimension frameSize;
     private int fps;
@@ -38,6 +42,8 @@ public class VideoStreamer {
     private WritableByteChannel channel;
 
     private ByteArrayOutputStream ffmpegLog = new ByteArrayOutputStream(4096);
+
+    private ConcurrentLinkedQueue<ByteBuffer> frameQueue;
 
     @Getter
     private boolean active;
@@ -85,11 +91,23 @@ public class VideoStreamer {
         outputStream = ffmpegProcess.getOutputStream();
         channel = Channels.newChannel(outputStream);
 
-        active = true;
-    }
+        frameQueue = new ConcurrentLinkedQueue<>();
 
-    public void stopStream() {
-        active = false;
+        active = true;
+
+        while(active || !frameQueue.isEmpty()) {
+            try {
+                while(frameQueue.isEmpty()) {
+                    Thread.sleep(10L);
+                }
+
+                channel.write(frameQueue.poll());
+            } catch(IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        System.out.println("Finishing FFMPEG writing");
 
         IOUtils.closeQuietly(outputStream);
 
@@ -114,16 +132,24 @@ public class VideoStreamer {
         } while (rem > 0);
 
         ffmpegProcess.destroy();
+
+        System.out.println("FFMPEG writing finished");
     }
 
-    public void writeFrameToStream(PanoramicFrame frame) {
+    public void stopStream() {
+        active = false;
+    }
+
+    public synchronized void writeFrameToStream(PanoramicFrame frame) {
         if(!active) throw new IllegalStateException("VideoStreamer is currently not active");
 
-        try {
-            channel.write(frame.getByteBuffer());
-        } catch(IOException e) {
-            e.printStackTrace();
+        //if the frameQueue is too full, we remove one element before adding our new element
+        if(frameQueue.size() > MAX_FRAME_BUFFER) {
+            frameQueue.poll();
         }
+
+        ByteBuffer buf = frame.getByteBuffer();
+        frameQueue.offer(buf);
     }
 
 }

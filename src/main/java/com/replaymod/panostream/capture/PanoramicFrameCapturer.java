@@ -59,7 +59,14 @@ public class PanoramicFrameCapturer {
     }
 
     public void start() throws IOException{
-        videoStreamer.startStream();
+        new Thread(() -> {
+            try {
+                videoStreamer.startStream();
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+        }, "ffmpeg-process").start();
+
         active = true;
     }
 
