@@ -14,9 +14,10 @@ public class PanoStreamMod {
     public static final String MODID = "panostream";
 
     public static final int DEFAULT_FPS = 30;
-    public static final int DEFAULT_FRAMESIZE = 1080; //for 4k
-    //public static final String DEFAULT_DESTINATION = "udp://localhost:9001";
-    public static final String DEFAULT_DESTINATION = "equi.mp4";
+    //public static final int DEFAULT_FRAMESIZE = 1080; //for 4k
+    public static final int DEFAULT_FRAMESIZE = 540; //for 1080p
+    public static final String DEFAULT_DESTINATION = "rtmp://127.0.0.1/panostream/minecraft";
+    //public static final String DEFAULT_DESTINATION = "equi.mp4";
 
     @Mod.Instance(value = MODID)
     public static PanoStreamMod instance;

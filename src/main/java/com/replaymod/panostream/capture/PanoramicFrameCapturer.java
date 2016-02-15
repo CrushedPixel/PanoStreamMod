@@ -40,6 +40,8 @@ public class PanoramicFrameCapturer {
 
     private final EmptyGuiScreen emptyGuiScreen = new EmptyGuiScreen();
 
+    private long lastCaptureTime = System.currentTimeMillis();
+
     public PanoramicFrameCapturer(int frameSize, VideoStreamer videoStreamer) {
         this.videoStreamer = videoStreamer;
         panoramicFrame = new PanoramicFrame(frameSize);
@@ -90,6 +92,11 @@ public class PanoramicFrameCapturer {
         if(!active) return;
         if(mc.currentScreen instanceof GuiMainMenu) return; //TODO: handle GuiMainMenu
         if(event.phase != TickEvent.Phase.END) return;
+
+        long curTime = System.currentTimeMillis();
+        if(curTime - lastCaptureTime < 1000 / videoStreamer.getFps()) return; //cap the framerate
+
+        lastCaptureTime = curTime;
 
         //when rendering is finished, we render the six perspectives
         int widthBefore = mc.displayWidth;

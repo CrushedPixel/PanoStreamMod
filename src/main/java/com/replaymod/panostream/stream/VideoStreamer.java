@@ -32,13 +32,17 @@ public class VideoStreamer {
     private String ffmpegCommand = "ffmpeg";
 
     @Setter
-    private String ffmpegArguments = "-y -f rawvideo -pix_fmt rgb24 -s %WIDTH%x%HEIGHT% -i - -an -c:v libx264 -preset ultrafast -pix_fmt yuv420p -f mpegts \"%DESTINATION%\"";
+    private String ffmpegArguments = "-re -f rawvideo -pix_fmt rgb24 -s %WIDTH%x%HEIGHT% -r %FPS% -i - -f flv -qmin 2 -qmax 25 -rtmp_buffer 100 -rtmp_live live %DESTINATION%";
 
     private ReadableDimension frameSize;
+
+    @Getter
     private int fps;
+
     private String destination;
 
     private OutputStream outputStream;
+
     private WritableByteChannel channel;
 
     private ByteArrayOutputStream ffmpegLog = new ByteArrayOutputStream(4096);
