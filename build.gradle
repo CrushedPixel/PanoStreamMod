@@ -57,6 +57,8 @@ dependencies {
 
     compile 'org.aspectj:aspectjrt:1.8.2'
 
+    compile project(':jGui')
+
     // you may put jars on which you depend on in ./libs
     // or you may define them like so..
     //compile "some.group:artifact:version:classifier"
@@ -78,7 +80,7 @@ jar {
     from project.mixinRefMap
 
     def shade = {libFiles + files(configurations.compile.findAll { c ->
-        ['mixin', 'isoparser', 'aspectjrt'].any {c.name.startsWith("$it-")}
+        ['mixin', 'aspectjrt', 'jGui'].any {c.name.startsWith("$it-")}
     })}
 
     def noticeDir = file("$buildDir/NOTICE")
