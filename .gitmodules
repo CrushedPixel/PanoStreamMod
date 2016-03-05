@@ -3,4 +3,4 @@
 	url = https://github.com/ReplayMod/jGui.git
 [submodule "SimpleConfig"]
 	path = SimpleConfig
-	url = https://github.com/ReplayMod/SimpleConfig.git
+	url = https://github.com/ReplayMod/SimpleConfig
