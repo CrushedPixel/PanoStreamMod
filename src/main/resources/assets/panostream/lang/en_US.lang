@@ -1,0 +1,15 @@
+panostream.title=PanoStream Mod
+
+panostream.gui.settings.title=PanoStream Mod Settings
+
+panostream.gui.settings.rtmpaddress.title=RTMP Server Address
+panostream.gui.settings.resolution.title=Stream Resolution
+panostream.gui.settings.fps.title=FPS Limit
+panostream.gui.settings.ffmpeg.title=FFmpeg Configuration
+
+panostream.gui.settings.rtmpaddress.info=RTMP Server Address
+panostream.gui.settings.resolution.info=Stream Resolution
+panostream.gui.settings.fps.info=FPS Limit
+panostream.gui.settings.ffmpeg.info=ffmpeg configuration
+
+panostream.input.keybindpanostreamsettings=Open PanoStream Settings

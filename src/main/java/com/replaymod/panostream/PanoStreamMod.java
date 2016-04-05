@@ -1,6 +1,7 @@
 package com.replaymod.panostream;
 
 import com.replaymod.panostream.capture.PanoramicFrameCapturer;
+import com.replaymod.panostream.input.CustomKeyBindings;
 import com.replaymod.panostream.settings.PanoStreamSettings;
 import com.replaymod.panostream.stream.VideoStreamer;
 import lombok.Getter;
@@ -30,6 +31,9 @@ public class PanoStreamMod {
     @Getter
     private PanoStreamSettings panoStreamSettings;
 
+    @Getter
+    private CustomKeyBindings customKeyBindings;
+
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         panoStreamSettings = new PanoStreamSettings(new Configuration(event.getSuggestedConfigurationFile()));
@@ -44,6 +48,8 @@ public class PanoStreamMod {
 
         panoramicFrameCapturer = new PanoramicFrameCapturer(panoStreamSettings.videoHeight.getIntValue() / 2,
                 videoStreamer).register();
+
+        customKeyBindings = new CustomKeyBindings().register();
     }
 
 }

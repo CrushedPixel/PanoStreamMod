@@ -1,10 +1,10 @@
 package com.replaymod.panostream.stream;
 
+import com.replaymod.panostream.PanoStreamMod;
 import com.replaymod.panostream.capture.PanoramicFrame;
 import com.replaymod.panostream.utils.StreamPipe;
 import com.replaymod.panostream.utils.StringUtil;
 import lombok.Getter;
-import lombok.Setter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.TeeOutputStream;
 import org.lwjgl.util.ReadableDimension;
@@ -26,13 +26,6 @@ public class VideoStreamer {
     private static final int MAX_FRAME_BUFFER = 5;
 
     private Process ffmpegProcess;
-
-    //the default ffmpeg arguments to output an FLV video to a stream or a file
-    @Setter
-    private String ffmpegCommand = "ffmpeg";
-
-    @Setter
-    private String ffmpegArguments = "-re -f rawvideo -pix_fmt rgb24 -s %WIDTH%x%HEIGHT% -r %FPS% -i - -f flv -qmin 2 -qmax 25 -rtmp_buffer 100 -rtmp_live live %DESTINATION%";
 
     private ReadableDimension frameSize;
 
@@ -74,12 +67,15 @@ public class VideoStreamer {
     }
 
     public void startStream() throws IOException {
-        String commandArgs = ffmpegArguments.replace("%WIDTH%", String.valueOf(frameSize.getWidth()))
+        String commandArgs = PanoStreamMod.instance.getPanoStreamSettings().ffmpegArgs.getStringValue()
+                .replace("%WIDTH%", String.valueOf(frameSize.getWidth()))
                 .replace("%HEIGHT%", String.valueOf(frameSize.getHeight()))
                 .replace("%FPS%", String.valueOf(fps))
                 .replace("%DESTINATION%", destination);
 
         List<String> command = new ArrayList<>();
+
+        String ffmpegCommand = PanoStreamMod.instance.getPanoStreamSettings().ffmpegCommand.getStringValue();
 
         command.add(ffmpegCommand);
         command.addAll(StringUtil.translateCommandline(commandArgs));
