@@ -13,3 +13,4 @@ panostream.gui.settings.fps.info=FPS Limit
 panostream.gui.settings.ffmpeg.info=ffmpeg configuration
 
 panostream.input.keybindpanostreamsettings=Open PanoStream Settings
+panostream.input.keybindtogglestreaming=Start/Stop Streaming

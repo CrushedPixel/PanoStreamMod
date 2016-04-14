@@ -9,4 +9,8 @@ public class FrameSizeUtil {
         return new Dimension(frameSize * 4, frameSize * 2);
     }
 
+    public static int singleFrameSize(int composedWidth) {
+        return composedWidth / 4;
+    }
+
 }

@@ -88,8 +88,10 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
         new SettingsRow("panostream.gui.settings.ffmpeg",
                 new GuiPanel().setLayout(new HorizontalLayout(HorizontalLayout.Alignment.CENTER).setSpacing(5))
                         .addElements(null,
-                                new GuiTextField().setText(panoStreamSettings.ffmpegCommand.getStringValue()).setWidth(50),
-                                new GuiTextField().setText(panoStreamSettings.ffmpegArgs.getStringValue()).setWidth(100))) {
+                                new GuiTextField().setMaxLength(1000)
+                                        .setText(panoStreamSettings.ffmpegCommand.getStringValue()).setWidth(50),
+                                new GuiTextField().setMaxLength(1000)
+                                        .setText(panoStreamSettings.ffmpegArgs.getStringValue()).setWidth(100))) {
 
             @Override
             void applySetting() {

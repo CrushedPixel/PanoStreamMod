@@ -2,35 +2,32 @@ package com.replaymod.panostream.capture;
 
 import com.replaymod.panostream.gui.EmptyGuiScreen;
 import com.replaymod.panostream.stream.VideoStreamer;
-import com.replaymod.panostream.utils.FrameSizeUtil;
+import com.replaymod.panostream.utils.Registerable;
 import com.replaymod.panostream.utils.ScaledResolutionUtil;
 import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.RenderHandEvent;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.EntityJoinWorldEvent;
-import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
-import net.minecraftforge.fml.common.network.FMLNetworkEvent;
 import org.lwjgl.opengl.GL11;
 
-import java.io.IOException;
 
-
-public class PanoramicFrameCapturer {
+public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer> {
 
     private final Minecraft mc = Minecraft.getMinecraft();
     private PanoramicFrame panoramicFrame;
 
     @Getter
-    private final VideoStreamer videoStreamer;
-
-    @Getter
+    @Setter
     private boolean active;
+
+    private final int fps;
+
+    private VideoStreamer videoStreamer;
 
     @Getter
     private Orientation orientation;
@@ -42,59 +39,27 @@ public class PanoramicFrameCapturer {
 
     private long lastCaptureTime = System.currentTimeMillis();
 
-    public PanoramicFrameCapturer(int frameSize, VideoStreamer videoStreamer) {
+    public PanoramicFrameCapturer(int frameSize, int fps, VideoStreamer videoStreamer) {
         this.videoStreamer = videoStreamer;
-        panoramicFrame = new PanoramicFrame(frameSize);
-        ScaledResolutionUtil.setWorldAndResolution(emptyGuiScreen, frameSize, frameSize);
-    }
+        this.fps = fps;
 
-    public PanoramicFrameCapturer register() {
-        FMLCommonHandler.instance().bus().register(this);
-        MinecraftForge.EVENT_BUS.register(this);
-        return this;
-    }
-
-    public void setFrameSize(int frameSize) {
-        panoramicFrame.setFrameSize(frameSize);
-        videoStreamer.setFrameSize(FrameSizeUtil.composedFrameSize(frameSize));
-        ScaledResolutionUtil.setWorldAndResolution(emptyGuiScreen, frameSize, frameSize);
-    }
-
-    public void start() throws IOException{
-        new Thread(() -> {
-            try {
-                videoStreamer.startStream();
-            } catch(Exception e) {
-                e.printStackTrace();
+        mc.addScheduledTask(new Runnable() {
+            @Override
+            public void run() {
+                panoramicFrame = new PanoramicFrame(frameSize);
+                ScaledResolutionUtil.setWorldAndResolution(emptyGuiScreen, frameSize, frameSize);
             }
-        }, "ffmpeg-process").start();
-
-        active = true;
-    }
-
-    public void stop() {
-        videoStreamer.stopStream();
-        active = false;
-    }
-
-    @SubscribeEvent
-    public void joinWorldEvent(EntityJoinWorldEvent event) throws IOException {
-        if(!active) start();
-    }
-
-    @SubscribeEvent
-    public void leaveWorld(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
-        if(active) stop();
+        });
     }
 
     @SubscribeEvent
     public void capturePanoramicFrame(TickEvent.RenderTickEvent event) {
-        if(!active) return;
+        if(!active || panoramicFrame == null) return;
         if(mc.currentScreen instanceof GuiMainMenu) return; //TODO: handle GuiMainMenu
         if(event.phase != TickEvent.Phase.END) return;
 
         long curTime = System.currentTimeMillis();
-        if(curTime - lastCaptureTime < 1000 / videoStreamer.getFps()) return; //cap the framerate
+        if(curTime - lastCaptureTime < 1000 / fps) return; //cap the framerate
 
         lastCaptureTime = curTime;
 
@@ -117,7 +82,8 @@ public class PanoramicFrameCapturer {
 
         panoramicFrame.composeEquirectangular();
 
-        if(videoStreamer.isActive()) videoStreamer.writeFrameToStream(panoramicFrame);
+        if(videoStreamer.getStreamingThread().isActive() && !videoStreamer.getStreamingThread().isStopping())
+            videoStreamer.writeFrameToStream(panoramicFrame);
 
         mc.displayWidth = widthBefore;
         mc.displayHeight = heightBefore;
@@ -187,6 +153,11 @@ public class PanoramicFrameCapturer {
 
     public enum Orientation {
         FRONT, BACK, LEFT, RIGHT, BOTTOM, TOP;
+    }
+
+    @Override
+    public PanoramicFrameCapturer getThis() {
+        return this;
     }
 
 }

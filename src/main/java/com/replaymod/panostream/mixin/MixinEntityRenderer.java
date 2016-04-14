@@ -19,8 +19,8 @@ public class MixinEntityRenderer {
 
     @Inject(method = "orientCamera", at = @At("HEAD"))
     private void setupCubicFrameRotation(float partialTicks, CallbackInfo ci) {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getPanoramicFrameCapturer();
-        if(!capturer.isActive() || capturer.getOrientation() == null) return;
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
+        if(capturer == null || !capturer.isActive() || capturer.getOrientation() == null) return;
 
         switch(capturer.getOrientation()) {
             case FRONT:
@@ -64,8 +64,8 @@ public class MixinEntityRenderer {
 
     @Redirect(method = "setupOverlayRendering", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;ortho(DDDDDD)V"))
     private void centerOrtho(double left, double right, double bottom, double top, double zNear, double zFar) {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getPanoramicFrameCapturer();
-        if(!capturer.isActive() || !capturer.isDistortGUI()) {
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
+        if(capturer == null || !capturer.isActive() || !capturer.isDistortGUI()) {
             GlStateManager.ortho(left, right, bottom, top, zNear, zFar);
         } else {
             int w = Display.getWidth();
@@ -100,9 +100,9 @@ public class MixinEntityRenderer {
     }
 
     public void gluPerspective(float fovY, float aspect, float zNear, float zFar) {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getPanoramicFrameCapturer();
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
         //normalizing the FOV for capturing of cubic frames
-        if(capturer.isActive() && capturer.getOrientation() != null) {
+        if(capturer != null && capturer.isActive() && capturer.getOrientation() != null) {
             fovY = 90;
             aspect = 1;
         }
@@ -117,9 +117,9 @@ public class MixinEntityRenderer {
     */
 
     private void rotateHand() {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getPanoramicFrameCapturer();
-        if(capturer != null && capturer.isActive() && capturer.getOrientation() != null) {
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
 
+        if(capturer != null && capturer.isActive() && capturer.getOrientation() != null) {
             switch(capturer.getOrientation()) {
                 case FRONT:
                     GlStateManager.rotate(0, 0.0F, 1.0F, 0.0F);
@@ -140,7 +140,6 @@ public class MixinEntityRenderer {
                     GlStateManager.rotate(-90, 1.0F, 0.0F, 0.0F);
                     break;
             }
-
         }
     }
 }

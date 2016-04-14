@@ -2,9 +2,11 @@ package com.replaymod.panostream.input;
 
 import com.replaymod.panostream.PanoStreamMod;
 import com.replaymod.panostream.gui.GuiPanoStreamSettings;
+import com.replaymod.panostream.utils.Registerable;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.settings.KeyBinding;
-import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent;
 import org.lwjgl.input.Keyboard;
@@ -13,19 +15,39 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class CustomKeyBindings {
+public class CustomKeyBindings extends Registerable<CustomKeyBindings> {
 
     private static Minecraft mc = Minecraft.getMinecraft();
 
-    private final List<KeyBinding> customKeyBindings = new ArrayList<>();
+    private final List<CustomKeyBinding> customKeyBindings = new ArrayList<>();
 
-    public final KeyBinding keyBindPanoStreamSettings = new KeyBinding("panostream.input.keybindpanostreamsettings",
-            Keyboard.KEY_O, "panostream.title");
+    public final CustomKeyBinding keyBindPanoStreamSettings = new CustomKeyBinding("panostream.input.keybindpanostreamsettings",
+            Keyboard.KEY_O, "panostream.title") {
+        @Override
+        public void onPressed() {
+            new GuiPanoStreamSettings(null, PanoStreamMod.instance.getPanoStreamSettings()).display();
+        }
+    };
+
+    public final CustomKeyBinding keyBindToggleStreaming = new CustomKeyBinding("panostream.input.keybindtogglestreaming",
+            Keyboard.KEY_F12, "panostream.title") {
+        @Override
+        public void onPressed() {
+            new Thread(() -> PanoStreamMod.instance.getVideoStreamer().toggleStream(), "ffmpeg-process").start();
+        }
+
+        @Override
+        public boolean checkPressed(boolean guiScreen) {
+            return (!guiScreen || mc.currentScreen instanceof GuiMainMenu) && super.checkPressed(guiScreen);
+        }
+    };
 
     public CustomKeyBindings() {
         customKeyBindings.add(keyBindPanoStreamSettings);
+        customKeyBindings.add(keyBindToggleStreaming);
     }
 
+    @Override
     public CustomKeyBindings register() {
         List<KeyBinding> bindings = new ArrayList<KeyBinding>(Arrays.asList(mc.gameSettings.keyBindings));
         bindings.addAll(customKeyBindings);
@@ -34,16 +56,28 @@ public class CustomKeyBindings {
 
         mc.gameSettings.loadOptions();
 
-        FMLCommonHandler.instance().bus().register(this);
+        return super.register();
+    }
 
-        return this;
+    @SubscribeEvent
+    public void onKeyInput(GuiScreenEvent.KeyboardInputEvent.Pre event) {
+        onKeyInput(true);
     }
 
     @SubscribeEvent
     public void onKeyInput(InputEvent.KeyInputEvent event) {
-        if(mc.currentScreen == null && keyBindPanoStreamSettings.isPressed()) {
-            new GuiPanoStreamSettings(null, PanoStreamMod.instance.getPanoStreamSettings()).display();
+        onKeyInput(false);
+    }
+
+    public void onKeyInput(boolean guiScreen) {
+        for(CustomKeyBinding binding : customKeyBindings) {
+            binding.press(guiScreen);
         }
+    }
+
+    @Override
+    public CustomKeyBindings getThis() {
+        return this;
     }
 
 }

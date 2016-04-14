@@ -14,8 +14,8 @@ public class MixinGuiIngame {
 
     @Inject(method = "func_180480_a", at = @At("HEAD"), cancellable = true)
     private void disableVignette(float f, ScaledResolution res, CallbackInfo ci) {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getPanoramicFrameCapturer();
-        if(capturer.isActive() && capturer.getOrientation() != null) ci.cancel();
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
+        if(capturer != null && capturer.isActive() && capturer.getOrientation() != null) ci.cancel();
     }
 
 }
