@@ -14,8 +14,8 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 
 public class GuiOverlays extends Registerable<GuiOverlays> {
 
-    private static final ResourceLocation OVERLAY_RESOURCE = new ResourceLocation("panostream", "overlay.png");
-    private static final int TEXTURE_SIZE = 64;
+    public static final ResourceLocation OVERLAY_RESOURCE = new ResourceLocation("panostream", "overlay.png");
+    public static final int TEXTURE_SIZE = 64;
 
     private final Minecraft mc = Minecraft.getMinecraft();
 

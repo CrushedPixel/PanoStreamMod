@@ -7,10 +7,10 @@ panostream.gui.settings.resolution.title=Stream Resolution
 panostream.gui.settings.fps.title=FPS Limit
 panostream.gui.settings.ffmpeg.title=FFmpeg Configuration
 
-panostream.gui.settings.rtmpaddress.info=RTMP Server Address
-panostream.gui.settings.resolution.info=Stream Resolution
-panostream.gui.settings.fps.info=FPS Limit
-panostream.gui.settings.ffmpeg.info=ffmpeg configuration
+panostream.gui.settings.rtmpaddress.info=The RTMP server to send the output stream to.
+panostream.gui.settings.resolution.info=The resolution of the output stream. The aspect ratio is forced to be 2:1
+panostream.gui.settings.fps.info=The maximum FPS of the output stream.
+panostream.gui.settings.ffmpeg.info=The FFmpeg command line arguments used to create the output stream. Don't mess with this unless you know what you're doing.
 
 panostream.input.keybindpanostreamsettings=Open PanoStream Settings
 panostream.input.keybindtogglestreaming=Start/Stop Streaming

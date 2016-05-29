@@ -3,7 +3,13 @@ package com.replaymod.panostream.gui;
 import com.replaymod.panostream.settings.PanoStreamSettings;
 import de.johni0702.minecraft.gui.container.AbstractGuiScreen;
 import de.johni0702.minecraft.gui.container.GuiPanel;
-import de.johni0702.minecraft.gui.element.*;
+import de.johni0702.minecraft.gui.element.GuiButton;
+import de.johni0702.minecraft.gui.element.GuiElement;
+import de.johni0702.minecraft.gui.element.GuiLabel;
+import de.johni0702.minecraft.gui.element.GuiNumberField;
+import de.johni0702.minecraft.gui.element.GuiTextField;
+import de.johni0702.minecraft.gui.element.GuiTexturedButton;
+import de.johni0702.minecraft.gui.element.GuiTooltip;
 import de.johni0702.minecraft.gui.layout.CustomLayout;
 import de.johni0702.minecraft.gui.layout.GridLayout;
 import de.johni0702.minecraft.gui.layout.HorizontalLayout;
@@ -30,7 +36,7 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
                 new GridLayout().setCellsEqualSize(false).setSpacingX(10).setSpacingY(10).setColumns(3));
 
         new SettingsRow("panostream.gui.settings.rtmpaddress",
-                new GuiTextField().setText(panoStreamSettings.rtmpServer.getStringValue())) {
+                new GuiTextField().setHeight(20).setMaxLength(1000).setText(panoStreamSettings.rtmpServer.getStringValue())) {
 
             @Override
             void applySetting() {
@@ -50,6 +56,7 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
                 widthField = new GuiNumberField().setValue(panoStreamSettings.videoWidth.getIntValue()).setWidth(50)
                         .setMinValue(100)
                         .setMaxValue(10000)
+                        .setHeight(20)
                         .onTextChanged(obj -> {
                             heightField.setValue(widthField.getInteger() / 2);
                             widthField.setValue(heightField.getInteger() * 2);
@@ -58,6 +65,7 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
                 heightField = new GuiNumberField().setValue(panoStreamSettings.videoHeight.getIntValue()).setWidth(50)
                         .setMinValue(50)
                         .setMaxValue(5000)
+                        .setHeight(20)
                         .onTextChanged(obj -> {
                             widthField.setValue(heightField.getInteger() * 2);
                         });
@@ -76,7 +84,7 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
         }.addToCollection(settingRows).addTo(mainPanel);
 
         new SettingsRow("panostream.gui.settings.fps",
-                new GuiNumberField().setValue(panoStreamSettings.fps.getIntValue()).setWidth(50)) {
+                new GuiNumberField().setValue(panoStreamSettings.fps.getIntValue()).setWidth(50).setHeight(20)) {
 
             @Override
             void applySetting() {
@@ -89,9 +97,9 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
                 new GuiPanel().setLayout(new HorizontalLayout(HorizontalLayout.Alignment.CENTER).setSpacing(5))
                         .addElements(null,
                                 new GuiTextField().setMaxLength(1000)
-                                        .setText(panoStreamSettings.ffmpegCommand.getStringValue()).setWidth(50),
+                                        .setText(panoStreamSettings.ffmpegCommand.getStringValue()).setWidth(50).setHeight(20),
                                 new GuiTextField().setMaxLength(1000)
-                                        .setText(panoStreamSettings.ffmpegArgs.getStringValue()).setWidth(100))) {
+                                        .setText(panoStreamSettings.ffmpegArgs.getStringValue()).setWidth(100).setHeight(20))) {
 
             @Override
             void applySetting() {
@@ -146,16 +154,17 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
         protected final GuiElement inputElement;
 
         @Getter
-        private final GuiButton infoButton;
+        private final GuiTexturedButton infoButton;
 
         public SettingsRow(String optionI18NKey, GuiElement inputElement) {
             this.inputElement = inputElement;
 
             this.nameLabel = new GuiLabel().setI18nText(optionI18NKey+".title");
 
-            this.infoButton = new GuiButton()
+            this.infoButton = new GuiTexturedButton()
                     .setTooltip(new GuiTooltip().setI18nText(optionI18NKey+".info"))
-                    .setWidth(20).setLabel("i"); //TODO: Replace with fancy texture "i"
+                    .setWidth(20).setHeight(20).setTexture(GuiOverlays.OVERLAY_RESOURCE, GuiOverlays.TEXTURE_SIZE)
+                    .setTexturePos(16, 0, 16, 20);
         }
 
         abstract void applySetting();
