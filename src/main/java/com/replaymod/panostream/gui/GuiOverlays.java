@@ -22,42 +22,49 @@ public class GuiOverlays extends Registerable<GuiOverlays> {
     @SubscribeEvent
     public void onOverlayRender(TickEvent.RenderTickEvent event) {
         if(event.phase != TickEvent.Phase.END) return;
+        if(PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getState()
+                == StreamingThread.State.DISABLED) return;
 
-        if(PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getState() != StreamingThread.State.DISABLED) {
-            mc.renderEngine.bindTexture(OVERLAY_RESOURCE);
-            GlStateManager.enableAlpha();
+        GlStateManager.pushAttrib();
 
-            int width = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight).getScaledWidth();
+        mc.renderEngine.bindTexture(OVERLAY_RESOURCE);
+        GlStateManager.enableAlpha();
+        GlStateManager.disableLighting();
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.color(1, 1, 1);
 
-            int x = width - 10 - 16;
-            int y = 10;
+        int width = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight).getScaledWidth();
 
-            switch(PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getState()) {
-                case STREAMING:
-                    Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, 16, 16, TEXTURE_SIZE, TEXTURE_SIZE);
-                    break;
-                case RECONNECTING:
-                    int rotation = (int)(System.currentTimeMillis() % 1000) / 250 * 90;
-                    GuiUtils.drawRotatedRectWithCustomSizedTexture(x, y, rotation, 0, 48, 16, 16, TEXTURE_SIZE, TEXTURE_SIZE);
-                    GuiUtils.drawCenteredString(String.format("%s/%s",
-                            PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getReconnectionAttempts(),
-                            StreamingThread.MAX_RECONNECTION_ATTEMPTS), x + 8, y + 16 + 5, 0xffffff);
-                    break;
-                case FAILED:
-                    long diff = System.currentTimeMillis() - PanoStreamMod.instance.getVideoStreamer()
-                            .getStreamingThread().getFinishTime();
+        int x = width - 10 - 16;
+        int y = 10;
 
-                    //stays visible for 5 seconds, then disappears over 2 seconds
-                    float opacity = 1 - (Math.max(0, Math.min(1, (diff - 5000) / 2000f)));
+        switch(PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getState()) {
+            case STREAMING:
+                Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, 16, 16, TEXTURE_SIZE, TEXTURE_SIZE);
+                break;
+            case RECONNECTING:
+                int rotation = (int)(System.currentTimeMillis() % 1000) / 250 * 90;
+                GuiUtils.drawRotatedRectWithCustomSizedTexture(x, y, rotation, 0, 48, 16, 16, TEXTURE_SIZE, TEXTURE_SIZE);
+                GuiUtils.drawCenteredString(String.format("%s/%s",
+                        PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getReconnectionAttempts(),
+                        StreamingThread.MAX_RECONNECTION_ATTEMPTS), x + 8, y + 16 + 5, 0xffffff);
+                break;
+            case FAILED:
+                long diff = System.currentTimeMillis() - PanoStreamMod.instance.getVideoStreamer()
+                        .getStreamingThread().getFinishTime();
 
-                    GlStateManager.pushAttrib();
-                    GlStateManager.color(1, 1, 1, opacity);
-                    Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 16, 16, 16, TEXTURE_SIZE, TEXTURE_SIZE);
-                    GlStateManager.popAttrib();
-                    break;
-            }
+                //stays visible for 5 seconds, then disappears over 2 seconds
+                float opacity = 1 - (Math.max(0, Math.min(1, (diff - 5000) / 2000f)));
 
+                GlStateManager.pushAttrib();
+                GlStateManager.color(1, 1, 1, opacity);
+                Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 16, 16, 16, TEXTURE_SIZE, TEXTURE_SIZE);
+                GlStateManager.popAttrib();
+                break;
         }
+
+        GlStateManager.popAttrib();
     }
 
     public GuiOverlays getThis() {
