@@ -48,6 +48,7 @@ public class StreamingThread {
     @Getter
     private int framesWritten;
 
+    @Getter
     private PanoramicFrameCapturer panoramicFrameCapturer;
 
     private ConcurrentLinkedQueue<ByteBuffer> frameQueue;

@@ -3,7 +3,6 @@ package com.replaymod.panostream.stream;
 import com.google.common.base.Preconditions;
 import com.replaymod.panostream.PanoStreamMod;
 import com.replaymod.panostream.capture.PanoramicFrame;
-import com.replaymod.panostream.capture.PanoramicFrameCapturer;
 import com.replaymod.panostream.settings.PanoStreamSettings;
 import com.replaymod.panostream.utils.StringUtil;
 import lombok.Getter;
@@ -16,9 +15,6 @@ public class VideoStreamer {
 
     @Getter
     private int fps;
-
-    @Getter
-    private PanoramicFrameCapturer panoramicFrameCapturer;
 
     @Getter
     private final StreamingThread streamingThread = new StreamingThread();

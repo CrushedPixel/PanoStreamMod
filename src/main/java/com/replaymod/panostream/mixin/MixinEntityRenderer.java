@@ -19,7 +19,8 @@ public class MixinEntityRenderer {
 
     @Inject(method = "orientCamera", at = @At("HEAD"))
     private void setupCubicFrameRotation(float partialTicks, CallbackInfo ci) {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getPanoramicFrameCapturer();
+
         if(capturer == null || !capturer.isActive() || capturer.getOrientation() == null) return;
 
         switch(capturer.getOrientation()) {
@@ -64,7 +65,7 @@ public class MixinEntityRenderer {
 
     @Redirect(method = "setupOverlayRendering", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;ortho(DDDDDD)V"))
     private void centerOrtho(double left, double right, double bottom, double top, double zNear, double zFar) {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getPanoramicFrameCapturer();
         if(capturer == null || !capturer.isActive() || !capturer.isDistortGUI()) {
             GlStateManager.ortho(left, right, bottom, top, zNear, zFar);
         } else {
@@ -100,7 +101,7 @@ public class MixinEntityRenderer {
     }
 
     public void gluPerspective(float fovY, float aspect, float zNear, float zFar) {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getPanoramicFrameCapturer();
         //normalizing the FOV for capturing of cubic frames
         if(capturer != null && capturer.isActive() && capturer.getOrientation() != null) {
             fovY = 90;
@@ -117,7 +118,7 @@ public class MixinEntityRenderer {
     */
 
     private void rotateHand() {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getPanoramicFrameCapturer();
+        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getPanoramicFrameCapturer();
 
         if(capturer != null && capturer.isActive() && capturer.getOrientation() != null) {
             switch(capturer.getOrientation()) {
