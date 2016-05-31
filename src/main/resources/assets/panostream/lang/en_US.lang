@@ -14,3 +14,5 @@ panostream.gui.settings.ffmpeg.info=The FFmpeg command line arguments used to cr
 
 panostream.input.keybindpanostreamsettings=Open PanoStream Settings
 panostream.input.keybindtogglestreaming=Start/Stop Streaming
+
+panostream.chat.screenshot.saving=Saving Panoramic Screenshot...

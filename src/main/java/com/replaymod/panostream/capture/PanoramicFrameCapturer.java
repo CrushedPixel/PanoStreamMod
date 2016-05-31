@@ -7,7 +7,6 @@ import com.replaymod.panostream.utils.ScaledResolutionUtil;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.RenderHandEvent;
@@ -19,7 +18,9 @@ import org.lwjgl.opengl.GL11;
 public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer> {
 
     private final Minecraft mc = Minecraft.getMinecraft();
-    private PanoramicFrame panoramicFrame;
+
+    @Getter
+    protected PanoramicFrame panoramicFrame;
 
     @Getter
     @Setter
@@ -28,12 +29,6 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
     private final int fps;
 
     private VideoStreamer videoStreamer;
-
-    @Getter
-    private Orientation orientation;
-
-    @Getter
-    private boolean distortGUI = false;
 
     private final EmptyGuiScreen emptyGuiScreen = new EmptyGuiScreen();
 
@@ -55,7 +50,7 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
     @SubscribeEvent
     public void capturePanoramicFrame(TickEvent.RenderTickEvent event) {
         if(!active || panoramicFrame == null) return;
-        if(mc.currentScreen instanceof GuiMainMenu) return; //TODO: handle GuiMainMenu
+        //if(mc.currentScreen instanceof GuiMainMenu) return; //TODO: handle GuiMainMenu
         if(event.phase != TickEvent.Phase.END) return;
 
         long curTime = System.currentTimeMillis();
@@ -63,6 +58,14 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
 
         lastCaptureTime = curTime;
 
+        doCapture(true);
+
+        if(videoStreamer.getStreamingThread().isActive() && !videoStreamer.getStreamingThread().isStopping())
+            videoStreamer.writeFrameToStream(panoramicFrame);
+    }
+
+    protected void doCapture(boolean flip) {
+        CaptureState.setCapturing(true);
         //when rendering is finished, we render the six perspectives
         int widthBefore = mc.displayWidth;
         int heightBefore = mc.displayHeight;
@@ -70,7 +73,7 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
         mc.displayWidth = mc.displayHeight = panoramicFrame.getFrameSize();
 
         for(int i=0; i<6; i++) {
-            orientation = Orientation.values()[i];
+            CaptureState.setOrientation(Orientation.values()[i]);
 
             panoramicFrame.bindFramebuffer(i);
 
@@ -80,15 +83,12 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
             panoramicFrame.unbindFramebuffer();
         }
 
-        panoramicFrame.composeEquirectangular();
-
-        if(videoStreamer.getStreamingThread().isActive() && !videoStreamer.getStreamingThread().isStopping())
-            videoStreamer.writeFrameToStream(panoramicFrame);
+        panoramicFrame.composeEquirectangular(flip);
 
         mc.displayWidth = widthBefore;
         mc.displayHeight = heightBefore;
 
-        orientation = null; //disable the orientation so MC renders the frame normally next time
+        CaptureState.setCapturing(false);
     }
 
     private void renderWorld() {
@@ -106,7 +106,7 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
 
         //if a GuiScreen is opened, render the default overlay on the other sides
         GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
-        if(orientation != Orientation.FRONT) {
+        if(CaptureState.getOrientation() != Orientation.FRONT) {
             if(mc.currentScreen != null) {
                 GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
                 mc.entityRenderer.setupOverlayRendering();
@@ -115,9 +115,9 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
         } else {
             if(mc.thePlayer != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
             if(mc.currentScreen != null) {
-                distortGUI = true;
+                CaptureState.setDistortGUI(true);
                 mc.entityRenderer.setupOverlayRendering(); //re-setup overlay rendering with distortion enabled
-                distortGUI = false;
+                CaptureState.setDistortGUI(false);
                 GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
                 ForgeHooksClient.drawScreen(mc.currentScreen, 0, 0, 0);
             }
@@ -127,7 +127,7 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
     @SubscribeEvent
     public void onRenderHand(RenderHandEvent event) {
         //don't render the hand in every frame
-        if(active && orientation != null && orientation != Orientation.FRONT) event.setCanceled(true);
+        if(CaptureState.isCapturing() && CaptureState.getOrientation() != Orientation.FRONT) event.setCanceled(true);
     }
 
     /* Maybe we'll want to capture the GUI only on a separate Framebuffer later

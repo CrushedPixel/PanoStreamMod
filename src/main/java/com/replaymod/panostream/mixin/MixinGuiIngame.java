@@ -1,7 +1,6 @@
 package com.replaymod.panostream.mixin;
 
-import com.replaymod.panostream.PanoStreamMod;
-import com.replaymod.panostream.capture.PanoramicFrameCapturer;
+import com.replaymod.panostream.capture.CaptureState;
 import net.minecraft.client.gui.GuiIngame;
 import net.minecraft.client.gui.ScaledResolution;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,8 +13,7 @@ public class MixinGuiIngame {
 
     @Inject(method = "func_180480_a", at = @At("HEAD"), cancellable = true)
     private void disableVignette(float f, ScaledResolution res, CallbackInfo ci) {
-        PanoramicFrameCapturer capturer = PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getPanoramicFrameCapturer();
-        if(capturer != null && capturer.isActive() && capturer.getOrientation() != null) ci.cancel();
+        if(CaptureState.isCapturing()) ci.cancel();
     }
 
 }

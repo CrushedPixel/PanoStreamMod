@@ -17,9 +17,16 @@ uniform sampler2D rightTex;
 uniform sampler2D bottomTex;
 uniform sampler2D topTex;
 
+//whether or not to flip the image
+uniform int flip;
+
 void main() {
     float x = gl_TexCoord[0].x;
-    float y = 1.0 - gl_TexCoord[0].y; //flip the image
+    float y = gl_TexCoord[0].y;
+
+    if(flip == 1) {
+        y = 1.0 - gl_TexCoord[0].y; //flip the image
+    }
 
     float yaw = PI * 2.0 * x;
     int piQuarter = int(8.0 * x) - 4;

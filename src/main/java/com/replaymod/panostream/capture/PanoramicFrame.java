@@ -102,7 +102,7 @@ public class PanoramicFrame {
         }
     }
 
-    public void composeEquirectangular() {
+    public void composeEquirectangular(boolean flip) {
         for(int i=0; i<6; i++) {
             OpenGlHelper.setActiveTexture(GL13.GL_TEXTURE2 + i);
             framebuffers[i].bindFramebufferTexture();
@@ -113,6 +113,8 @@ public class PanoramicFrame {
         composedFramebuffer.bindFramebuffer(true);
 
         shaderProgram.use();
+
+        shaderProgram.setTexture("flip", flip ? 1 : 0);
         
         composedFramebuffer.framebufferRender(frameSize * 4, frameSize * 2);
 
