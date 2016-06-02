@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.shader.Framebuffer;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -113,6 +114,10 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
                 ForgeHooksClient.drawScreen(emptyGuiScreen, 0, 0, 0);
             }
         } else {
+            //temporarily replace Minecraft's framebuffer with our framebuffer as GuiMainMenu explicitly binds it
+            Framebuffer before = mc.framebufferMc;
+            mc.framebufferMc = panoramicFrame.getFramebuffer(0);
+
             if(mc.thePlayer != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
             if(mc.currentScreen != null) {
                 CaptureState.setDistortGUI(true);
@@ -121,6 +126,8 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
                 GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
                 ForgeHooksClient.drawScreen(mc.currentScreen, 0, 0, 0);
             }
+
+            mc.framebufferMc = before;
         }
     }
 
