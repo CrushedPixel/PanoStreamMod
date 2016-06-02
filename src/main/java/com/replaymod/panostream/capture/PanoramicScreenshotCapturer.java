@@ -53,7 +53,7 @@ public class PanoramicScreenshotCapturer extends PanoramicFrameCapturer {
             final Framebuffer fb = capturePanoScreenshot();
             Minecraft.getMinecraft().addScheduledTask(() -> {
                 IChatComponent component = ScreenShotHelper.saveScreenshot(gameDirectory, 4 * 1080, 2 * 1080, fb);
-                Minecraft.getMinecraft().thePlayer.addChatComponentMessage(component);
+                if(Minecraft.getMinecraft().thePlayer != null) Minecraft.getMinecraft().thePlayer.addChatComponentMessage(component);
             });
         }).start();
     }
