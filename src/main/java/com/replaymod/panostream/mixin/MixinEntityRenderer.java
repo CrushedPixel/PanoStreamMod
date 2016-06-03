@@ -65,34 +65,15 @@ public class MixinEntityRenderer {
         if(!CaptureState.isCapturing() || !CaptureState.isDistortGUI()) {
             GlStateManager.ortho(left, right, bottom, top, zNear, zFar);
         } else {
-            int w = Display.getWidth();
-            int h = Display.getHeight();
+            ScaledResolution sc = new ScaledResolution(Minecraft.getMinecraft(), Display.getWidth(), Display.getHeight());
 
-            ScaledResolution sc = new ScaledResolution(Minecraft.getMinecraft(), w, h);
-
-            int width = sc.getScaledWidth();
-            int height = sc.getScaledHeight();
-
-            double newLeft = left;
-            double newRight = right;
-            double newTop = top;
-            double newBottom = bottom;
-
-            if(width > height) {
-                //the GUI is wider than 1:1
-                double newWidth = right / (right / width);
-                newLeft = -((right - newWidth));
-
-                newBottom = bottom / (bottom / height); //THIS IS CORRECT!
+            if(sc.getScaledWidth_double() > sc.getScaledHeight_double()) {
+                double diff = sc.getScaledWidth_double() - sc.getScaledHeight_double();
+                GlStateManager.ortho(diff/2, sc.getScaledHeight_double() + (diff/2), sc.getScaledHeight_double(), 0, zNear, zFar);
             } else {
-                //the GUI is taller than 1:1
-                double newHeight = bottom / (bottom / height);
-                newTop = -((bottom - newHeight));
-
-                newRight = right / (right / width); //THIS IS CORRECT!
+                double diff = sc.getScaledHeight_double() - sc.getScaledWidth_double();
+                GlStateManager.ortho(0, sc.getScaledWidth_double(), sc.getScaledWidth_double() + (diff/2), diff/2, zNear, zFar);
             }
-
-            GlStateManager.ortho(newLeft, newRight, newBottom, newTop, zNear, zFar);
         }
     }
 
