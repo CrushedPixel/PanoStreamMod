@@ -2,6 +2,7 @@ package com.replaymod.panostream.gui;
 
 import com.replaymod.panostream.settings.PanoStreamSettings;
 import de.johni0702.minecraft.gui.container.AbstractGuiScreen;
+import de.johni0702.minecraft.gui.container.GuiContainer;
 import de.johni0702.minecraft.gui.container.GuiPanel;
 import de.johni0702.minecraft.gui.element.GuiButton;
 import de.johni0702.minecraft.gui.element.GuiElement;
@@ -10,15 +11,18 @@ import de.johni0702.minecraft.gui.element.GuiNumberField;
 import de.johni0702.minecraft.gui.element.GuiTextField;
 import de.johni0702.minecraft.gui.element.GuiTexturedButton;
 import de.johni0702.minecraft.gui.element.GuiTooltip;
+import de.johni0702.minecraft.gui.function.Focusable;
 import de.johni0702.minecraft.gui.layout.CustomLayout;
 import de.johni0702.minecraft.gui.layout.GridLayout;
 import de.johni0702.minecraft.gui.layout.HorizontalLayout;
+import de.johni0702.minecraft.gui.utils.Utils;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 
 public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettings> {
@@ -123,6 +127,11 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
             Minecraft.getMinecraft().displayGuiScreen(parent);
         }).setWidth(200);
 
+        List<Focusable> toLink = new LinkedList<Focusable>();
+        addFocusablesToList(mainPanel, toLink);
+
+        Utils.link(toLink.toArray(new Focusable[toLink.size()]));
+
         addElements(null, mainPanel, doneButton);
 
         setLayout(new CustomLayout<GuiPanoStreamSettings>() {
@@ -138,6 +147,17 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
         });
 
         setTitle(new GuiLabel().setI18nText("panostream.gui.settings.title"));
+    }
+
+    private void addFocusablesToList(GuiElement element, List<Focusable> list) {
+        if(element instanceof Focusable) {
+            list.add((Focusable)element);
+        } else if(element instanceof GuiContainer) {
+            GuiContainer container = (GuiContainer)element;
+            for(GuiElement guiElement : (Iterable<GuiElement>) container.getChildren()) {
+                addFocusablesToList(guiElement, list);
+            }
+        }
     }
 
     @Override
