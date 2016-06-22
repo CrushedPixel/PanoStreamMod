@@ -35,11 +35,6 @@ public class CustomKeyBindings extends Registerable<CustomKeyBindings> {
         public void onPressed() {
             new Thread(() -> PanoStreamMod.instance.getVideoStreamer().toggleStream(), "ffmpeg-process").start();
         }
-
-        @Override
-        public boolean checkPressed(boolean guiScreen) {
-            return (!guiScreen || mc.currentScreen instanceof GuiMainMenu) && super.checkPressed(guiScreen);
-        }
     };
 
     public CustomKeyBindings() {
