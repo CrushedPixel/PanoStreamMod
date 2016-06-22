@@ -3,14 +3,11 @@ package com.replaymod.panostream.capture;
 import com.replaymod.panostream.shader.Program;
 import com.replaymod.panostream.utils.ByteBufferPool;
 import lombok.Getter;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.util.ReportedException;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.ScreenShotHelper;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 
@@ -128,10 +125,6 @@ public class PanoramicFrame {
         }
 
         OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
-
-        //for development purposes
-        if(GuiScreen.isCtrlKeyDown())
-            ScreenShotHelper.saveScreenshot(Minecraft.getMinecraft().mcDataDir, 0, 0, composedFramebuffer);
     }
 
     public void transferToPBO() {
