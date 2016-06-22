@@ -4,7 +4,6 @@ import com.replaymod.panostream.PanoStreamMod;
 import com.replaymod.panostream.gui.GuiPanoStreamSettings;
 import com.replaymod.panostream.utils.Registerable;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;

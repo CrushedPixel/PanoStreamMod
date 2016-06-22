@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GuiIngame.class)
 public class MixinGuiIngame {
 
-    @Inject(method = "func_180480_a", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "renderVignette", at = @At("HEAD"), cancellable = true)
     private void disableVignette(float f, ScaledResolution res, CallbackInfo ci) {
         if(CaptureState.isCapturing()) ci.cancel();
     }

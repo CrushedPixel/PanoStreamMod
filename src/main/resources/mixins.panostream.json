@@ -9,5 +9,5 @@
   ],
   "server": [],
   "client": [],
-  "refmap": "mixins.panostream.refmap.json"
+  "refmap": "mixin.refmap.json"
 }
