@@ -5,6 +5,7 @@ import de.johni0702.minecraft.gui.container.AbstractGuiScreen;
 import de.johni0702.minecraft.gui.container.GuiContainer;
 import de.johni0702.minecraft.gui.container.GuiPanel;
 import de.johni0702.minecraft.gui.element.GuiButton;
+import de.johni0702.minecraft.gui.element.GuiCheckbox;
 import de.johni0702.minecraft.gui.element.GuiElement;
 import de.johni0702.minecraft.gui.element.GuiLabel;
 import de.johni0702.minecraft.gui.element.GuiNumberField;
@@ -39,12 +40,32 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
         final GuiPanel mainPanel = new GuiPanel(this).setLayout(
                 new GridLayout().setCellsEqualSize(false).setSpacingX(10).setSpacingY(10).setColumns(3));
 
-        new SettingsRow("panostream.gui.settings.rtmpaddress",
-                new GuiTextField().setHeight(20).setMaxLength(1000).setText(panoStreamSettings.rtmpServer.getStringValue())) {
+        new SettingsRow("panostream.gui.settings.stabilize",
+                new GuiCheckbox().setChecked(panoStreamSettings.stabilizeOutput.getValue())) {
 
             @Override
             void applySetting() {
-                panoStreamSettings.rtmpServer.setStringValue(((GuiTextField) inputElement).getText());
+                panoStreamSettings.stabilizeOutput.setValue(((GuiCheckbox) inputElement).isChecked());
+            }
+
+            @Override
+            void restoreDefault() {
+                ((GuiCheckbox) inputElement).setChecked(panoStreamSettings.stabilizeOutput.getDefault());
+            }
+
+        }.addToCollection(settingRows).addTo(mainPanel, new GridLayout.Data(0, TEXT_ALIGNMENT));
+
+        new SettingsRow("panostream.gui.settings.rtmpaddress",
+                new GuiTextField().setHeight(20).setMaxLength(1000).setText(panoStreamSettings.rtmpServer.getValue())) {
+
+            @Override
+            void applySetting() {
+                panoStreamSettings.rtmpServer.setValue(((GuiTextField) inputElement).getText());
+            }
+
+            @Override
+            void restoreDefault() {
+                ((GuiTextField) inputElement).setText(panoStreamSettings.rtmpServer.getDefault());
             }
 
         }.addToCollection(settingRows).addTo(mainPanel);
@@ -57,42 +78,63 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
             {
                 GuiPanel panel = (GuiPanel)inputElement;
 
-                widthField = new GuiNumberField().setValue(panoStreamSettings.videoWidth.getIntValue()).setWidth(50)
-                        .setMinValue(100)
-                        .setMaxValue(10000)
+                widthField = new GuiNumberField().setValue(panoStreamSettings.videoWidth.getValue()).setWidth(50)
+                        .setMinValue(0)
+                        .setMaxValue(100000)
                         .setHeight(20)
+                        .setValidateOnFocusChange(true)
                         .onTextChanged(obj -> {
                             heightField.setValue(widthField.getInteger() / 2);
                             widthField.setValue(heightField.getInteger() * 2);
                         });
 
-                heightField = new GuiNumberField().setValue(panoStreamSettings.videoHeight.getIntValue()).setWidth(50)
-                        .setMinValue(50)
-                        .setMaxValue(5000)
+                heightField = new GuiNumberField().setValue(panoStreamSettings.videoHeight.getValue()).setWidth(50)
+                        .setMinValue(0)
+                        .setMaxValue(50000)
                         .setHeight(20)
+                        .setValidateOnFocusChange(true)
+                        .onFocusChange(focused -> {
+                            if (heightField.getInteger() > 5000) heightField.setValue(5000);
+                            if (heightField.getInteger() < 100) heightField.setValue(100);
+                        })
                         .onTextChanged(obj -> {
                             widthField.setValue(heightField.getInteger() * 2);
                         });
 
                 panel.addElements(null, widthField)
-                    .addElements(new HorizontalLayout.Data(TEXT_ALIGNMENT), new GuiLabel().setText("*"))
-                    .addElements(null, heightField);
+                        .addElements(new HorizontalLayout.Data(TEXT_ALIGNMENT), new GuiLabel().setText("*"))
+                        .addElements(null, heightField);
             }
 
-        @Override
+            @Override
             void applySetting() {
-                panoStreamSettings.videoWidth.setIntValue(widthField.getInteger());
-                panoStreamSettings.videoHeight.setIntValue(heightField.getInteger());
+                panoStreamSettings.videoWidth.setValue(widthField.getInteger());
+                panoStreamSettings.videoHeight.setValue(heightField.getInteger());
+            }
+
+            @Override
+            void restoreDefault() {
+                widthField.setValue(panoStreamSettings.videoWidth.getDefault());
+                heightField.setValue(panoStreamSettings.videoHeight.getDefault());
             }
 
         }.addToCollection(settingRows).addTo(mainPanel);
 
         new SettingsRow("panostream.gui.settings.fps",
-                new GuiNumberField().setValue(panoStreamSettings.fps.getIntValue()).setWidth(50).setHeight(20)) {
+                new GuiNumberField().setValue(panoStreamSettings.fps.getValue())
+                        .setWidth(50)
+                        .setHeight(20)
+                        .setMinValue(0)
+                        .setValidateOnFocusChange(true)) {
 
             @Override
             void applySetting() {
-                panoStreamSettings.fps.setIntValue(((GuiNumberField) inputElement).getInteger());
+                panoStreamSettings.fps.setValue(((GuiNumberField) inputElement).getInteger());
+            }
+
+            @Override
+            void restoreDefault() {
+                ((GuiNumberField)inputElement).setValue(panoStreamSettings.fps.getDefault());
             }
 
         }.addToCollection(settingRows).addTo(mainPanel);
@@ -101,20 +143,30 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
                 new GuiPanel().setLayout(new HorizontalLayout(HorizontalLayout.Alignment.CENTER).setSpacing(5))
                         .addElements(null,
                                 new GuiTextField().setMaxLength(1000)
-                                        .setText(panoStreamSettings.ffmpegCommand.getStringValue()).setWidth(50).setHeight(20),
+                                        .setText(panoStreamSettings.ffmpegCommand.getValue()).setWidth(50).setHeight(20),
                                 new GuiTextField().setMaxLength(1000)
-                                        .setText(panoStreamSettings.ffmpegArgs.getStringValue()).setWidth(100).setHeight(20))) {
+                                        .setText(panoStreamSettings.ffmpegArgs.getValue()).setWidth(100).setHeight(20))) {
 
-            @Override
-            void applySetting() {
+            private GuiTextField ffmpegCommand, ffmpegArgs;
+
+            {
                 GuiPanel panel = (GuiPanel)inputElement;
                 Iterator<GuiElement> it = panel.getElements().keySet().iterator();
 
-                GuiTextField ffmpegCommand = (GuiTextField)it.next();
-                GuiTextField ffmpegArgs = (GuiTextField)it.next();
+                ffmpegCommand = (GuiTextField)it.next();
+                ffmpegArgs = (GuiTextField)it.next();
+            }
 
-                panoStreamSettings.ffmpegCommand.setStringValue(ffmpegCommand.getText());
-                panoStreamSettings.ffmpegArgs.setStringValue(ffmpegArgs.getText());
+            @Override
+            void applySetting() {
+                panoStreamSettings.ffmpegCommand.setValue(ffmpegCommand.getText());
+                panoStreamSettings.ffmpegArgs.setValue(ffmpegArgs.getText());
+            }
+
+            @Override
+            void restoreDefault() {
+                ffmpegCommand.setText(panoStreamSettings.ffmpegCommand.getDefault());
+                ffmpegArgs.setText(panoStreamSettings.ffmpegArgs.getDefault());
             }
 
         }.addToCollection(settingRows).addTo(mainPanel);
@@ -184,14 +236,20 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
             this.infoButton = new GuiTexturedButton()
                     .setTooltip(new GuiTooltip().setI18nText(optionI18NKey+".info"))
                     .setWidth(20).setHeight(20).setTexture(GuiOverlays.OVERLAY_RESOURCE, GuiOverlays.TEXTURE_SIZE)
-                    .setTexturePos(16, 0, 16, 20);
+                    .setTexturePos(16, 0, 16, 20)
+                    .onClick(SettingsRow.this::restoreDefault);
         }
 
         abstract void applySetting();
+        abstract void restoreDefault();
 
         public void addTo(GuiPanel guiPanel) {
+            addTo(guiPanel, null);
+        }
+
+        public void addTo(GuiPanel guiPanel, GridLayout.Data layoutData) {
             guiPanel.addElements(new GridLayout.Data(0, TEXT_ALIGNMENT), nameLabel);
-            guiPanel.addElements(null, inputElement, infoButton);
+            guiPanel.addElements(layoutData, inputElement, infoButton);
         }
 
         public SettingsRow addToCollection(Collection<SettingsRow> collection) {

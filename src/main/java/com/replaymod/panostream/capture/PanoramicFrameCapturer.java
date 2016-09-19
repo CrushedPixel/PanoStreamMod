@@ -1,5 +1,6 @@
 package com.replaymod.panostream.capture;
 
+import com.replaymod.panostream.PanoStreamMod;
 import com.replaymod.panostream.gui.EmptyGuiScreen;
 import com.replaymod.panostream.stream.VideoStreamer;
 import com.replaymod.panostream.utils.Registerable;
@@ -10,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.shader.Framebuffer;
+import net.minecraft.entity.Entity;
 import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -50,6 +52,10 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
         });
     }
 
+    public void destroy() {
+        panoramicFrame.destroy();
+    }
+
     @SubscribeEvent
     public void capturePanoramicFrame(TickEvent.RenderTickEvent event) {
         if(!active || panoramicFrame == null) return;
@@ -60,13 +66,13 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
 
         lastCaptureTime = curTime;
 
-        doCapture(true);
+        doCapture(true, PanoStreamMod.instance.getPanoStreamSettings().stabilizeOutput.getValue());
 
         if(videoStreamer.getStreamingThread().isActive() && !videoStreamer.getStreamingThread().isStopping())
             videoStreamer.writeFrameToStream(panoramicFrame);
     }
 
-    protected void doCapture(boolean flip) {
+    protected void doCapture(boolean flip, boolean stabilize) {
         CaptureState.setCapturing(true);
         //when rendering is finished, we render the six perspectives
         int widthBefore = mc.displayWidth;
@@ -91,7 +97,16 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
             panoramicFrame.unbindFramebuffer();
         }
 
-        panoramicFrame.composeEquirectangular(flip);
+        float yawCorrection = 0;
+        float pitchCorrection = 0;
+
+        Entity viewEntity = mc.getRenderViewEntity();
+        if(stabilize && viewEntity != null) {
+            yawCorrection = (float)Math.toRadians(viewEntity.rotationYaw);
+            pitchCorrection = (float)Math.toRadians(viewEntity.rotationPitch);
+        }
+
+        panoramicFrame.composeEquirectangular(flip, -yawCorrection, -pitchCorrection);
 
         mc.displayWidth = widthBefore;
         mc.displayHeight = heightBefore;

@@ -1,5 +1,6 @@
 package com.replaymod.panostream.settings;
 
+import eu.crushedpixel.minecraft.simpleconfig.BooleanSetting;
 import eu.crushedpixel.minecraft.simpleconfig.ConfigSettings;
 import eu.crushedpixel.minecraft.simpleconfig.IntegerSetting;
 import eu.crushedpixel.minecraft.simpleconfig.StringSetting;
@@ -19,6 +20,8 @@ public class PanoStreamSettings extends ConfigSettings {
             "-f flv -qmin 2 -qmax 25 -rtmp_buffer 100 -rtmp_live live %DESTINATION%");
 
     public StringSetting rtmpServer = new StringSetting("rtmp://localhost/panostream/live");
+
+    public BooleanSetting stabilizeOutput = new BooleanSetting(true);
 
     public PanoStreamSettings(Configuration config) {
         super(config);

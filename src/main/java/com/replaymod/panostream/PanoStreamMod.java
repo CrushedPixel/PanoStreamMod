@@ -5,7 +5,6 @@ import com.replaymod.panostream.input.CustomKeyBindings;
 import com.replaymod.panostream.settings.PanoStreamSettings;
 import com.replaymod.panostream.stream.VideoStreamer;
 import lombok.Getter;
-import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
@@ -18,8 +17,6 @@ public class PanoStreamMod {
 
     @Mod.Instance(value = MODID)
     public static PanoStreamMod instance;
-
-    private final Minecraft mc = Minecraft.getMinecraft();
 
     @Getter
     private VideoStreamer videoStreamer;

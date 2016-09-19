@@ -31,19 +31,19 @@ public class VideoStreamer {
     }
 
     private void startStream(PanoStreamSettings settings) throws IOException {
-        Preconditions.checkState(settings.videoWidth.getIntValue() == settings.videoHeight.getIntValue() * 2,
+        Preconditions.checkState(settings.videoWidth.getValue() == settings.videoHeight.getValue() * 2,
                 "Output video's aspect ratio has to be 2:1, is %sx%s",
-                settings.videoWidth.getIntValue(), settings.videoHeight.getIntValue());
+                settings.videoWidth.getValue(), settings.videoHeight.getValue());
 
-        String commandArgs = settings.ffmpegArgs.getStringValue()
-                .replace("%WIDTH%", String.valueOf(settings.videoWidth.getIntValue()))
-                .replace("%HEIGHT%", String.valueOf(settings.videoHeight.getIntValue()))
-                .replace("%FPS%", String.valueOf(this.fps = settings.fps.getIntValue()))
-                .replace("%DESTINATION%", settings.rtmpServer.getStringValue());
+        String commandArgs = settings.ffmpegArgs.getValue()
+                .replace("%WIDTH%", String.valueOf(settings.videoWidth.getValue()))
+                .replace("%HEIGHT%", String.valueOf(settings.videoHeight.getValue()))
+                .replace("%FPS%", String.valueOf(this.fps = settings.fps.getValue()))
+                .replace("%DESTINATION%", settings.rtmpServer.getValue());
 
         List<String> command = new ArrayList<>();
 
-        String ffmpegCommand = PanoStreamMod.instance.getPanoStreamSettings().ffmpegCommand.getStringValue();
+        String ffmpegCommand = PanoStreamMod.instance.getPanoStreamSettings().ffmpegCommand.getValue();
 
         command.add(ffmpegCommand);
         command.addAll(StringUtil.translateCommandline(commandArgs));

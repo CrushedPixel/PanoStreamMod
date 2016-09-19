@@ -7,6 +7,7 @@ import com.replaymod.panostream.capture.PanoramicFrameCapturer;
 import com.replaymod.panostream.utils.FrameSizeUtil;
 import com.replaymod.panostream.utils.StreamPipe;
 import lombok.Getter;
+import net.minecraft.client.Minecraft;
 import org.apache.commons.io.output.TeeOutputStream;
 
 import java.io.ByteArrayOutputStream;
@@ -66,10 +67,15 @@ public class StreamingThread {
 
         active.set(true);
 
+        //destroying the old panoramicFrameCapturer if existent
+        if(panoramicFrameCapturer != null) {
+            Minecraft.getMinecraft().addScheduledTask(panoramicFrameCapturer::destroy);
+        }
+
         new Thread(() -> {
             //starting the PanoramicFrameCapturer
             panoramicFrameCapturer = new PanoramicFrameCapturer(
-                    FrameSizeUtil.singleFrameSize(PanoStreamMod.instance.getPanoStreamSettings().videoWidth.getIntValue()),
+                    FrameSizeUtil.singleFrameSize(PanoStreamMod.instance.getPanoStreamSettings().videoWidth.getValue()),
                     videoStreamer.getFps(), videoStreamer).register();
 
             boolean result = false;

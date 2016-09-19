@@ -25,7 +25,7 @@ public class MixinMinecraft {
             screenshotCapturer.register();
         }
 
-        if(!GuiScreen.isShiftKeyDown()) {
+        if(!GuiScreen.isShiftKeyDown() && !GuiScreen.isCtrlKeyDown()) {
             return ScreenShotHelper.saveScreenshot(gameDirectory, width, height, buffer);
         }
 

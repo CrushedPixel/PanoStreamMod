@@ -35,14 +35,14 @@ public class PanoramicFrame {
     public PanoramicFrame(int frameSize) {
         this.frameSize = frameSize;
 
-        for(int i=0; i<6; i++) {
+        for (int i = 0; i < 6; i++) {
             Framebuffer fb = new Framebuffer(frameSize, frameSize, true);
             fb.setFramebufferColor(0.0F, 0.0F, 0.0F, 0.0F);
 
             framebuffers[i] = fb;
         }
 
-        composedFramebuffer = new Framebuffer(frameSize*4, frameSize*2, false);
+        composedFramebuffer = new Framebuffer(frameSize * 4, frameSize * 2, false);
         composedFramebuffer.setFramebufferColor(0.0F, 0.0F, 0.0F, 0.0F);
 
         try {
@@ -50,30 +50,18 @@ public class PanoramicFrame {
 
             shaderProgram.use();
 
-            shaderProgram.setTexture("frontTex", 2);
-            shaderProgram.setTexture("backTex", 3);
-            shaderProgram.setTexture("leftTex", 4);
-            shaderProgram.setTexture("rightTex", 5);
-            shaderProgram.setTexture("bottomTex", 6);
-            shaderProgram.setTexture("topTex", 7);
+            shaderProgram.setUniformValue("frontTex", 2);
+            shaderProgram.setUniformValue("backTex", 3);
+            shaderProgram.setUniformValue("leftTex", 4);
+            shaderProgram.setUniformValue("rightTex", 5);
+            shaderProgram.setUniformValue("bottomTex", 6);
+            shaderProgram.setUniformValue("topTex", 7);
 
             shaderProgram.stopUsing();
-        } catch(Exception e) {
+
+        } catch (Exception e) {
             throw new ReportedException(CrashReport.makeCrashReport(e, "Creating Equirectangular shaders"));
         }
-
-        bufferSize = (frameSize * 4) * (frameSize * 2) * 3;
-        pbo = new PixelBufferObject(bufferSize, PixelBufferObject.Usage.READ);
-    }
-
-    public void setFrameSize(int frameSize) {
-        this.frameSize = frameSize;
-
-        for(int i=0; i<6; i++) {
-            framebuffers[i].createFramebuffer(frameSize, frameSize);
-        }
-
-        if(pbo != null) pbo.delete();
 
         bufferSize = (frameSize * 4) * (frameSize * 2) * 3;
         pbo = new PixelBufferObject(bufferSize, PixelBufferObject.Usage.READ);
@@ -87,7 +75,11 @@ public class PanoramicFrame {
         framebuffers[i].bindFramebuffer(true);
     }
 
-    public void deleteFramebuffers() {
+    public void destroy() {
+        shaderProgram.delete();
+        pbo.delete();
+
+        //delete framebuffers
         for(int i=0; i<6; i++) {
             framebuffers[i].deleteFramebuffer();
         }
@@ -99,7 +91,7 @@ public class PanoramicFrame {
         }
     }
 
-    public void composeEquirectangular(boolean flip) {
+    public void composeEquirectangular(boolean flip, float yawCorrection, float pitchCorrection) {
         for(int i=0; i<6; i++) {
             OpenGlHelper.setActiveTexture(GL13.GL_TEXTURE2 + i);
             framebuffers[i].bindFramebufferTexture();
@@ -111,13 +103,17 @@ public class PanoramicFrame {
 
         shaderProgram.use();
 
-        shaderProgram.setTexture("flip", flip ? 1 : 0);
-        
+        shaderProgram.setUniformValue("flip", flip ? 1 : 0);
+        shaderProgram.setUniformValue("yawCorrection", yawCorrection);
+        shaderProgram.setUniformValue("pitchCorrection", pitchCorrection);
+
         composedFramebuffer.framebufferRender(frameSize * 4, frameSize * 2);
 
         shaderProgram.stopUsing();
 
         composedFramebuffer.unbindFramebuffer();
+
+        GL11.glBindTexture(GL13.GL_TEXTURE_CUBE_MAP, 0);
 
         for(int i=0; i<6; i++) {
             OpenGlHelper.setActiveTexture(GL13.GL_TEXTURE2 + i);

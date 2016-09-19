@@ -29,7 +29,7 @@ public class CustomKeyBindings extends Registerable<CustomKeyBindings> {
     };
 
     public final CustomKeyBinding keyBindToggleStreaming = new CustomKeyBinding("panostream.input.keybindtogglestreaming",
-            Keyboard.KEY_F12, "panostream.title") {
+            Keyboard.KEY_F4, "panostream.title") {
         @Override
         public void onPressed() {
             new Thread(() -> PanoStreamMod.instance.getVideoStreamer().toggleStream(), "ffmpeg-process").start();

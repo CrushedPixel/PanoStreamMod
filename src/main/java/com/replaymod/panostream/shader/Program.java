@@ -85,8 +85,12 @@ public class Program {
         return new Uniform(ARBShaderObjects.glGetUniformLocationARB(program, name));
     }
 
-    public void setTexture(String texture, int i) {
-        getUniformVariable(texture).set(i);
+    public void setUniformValue(String name, int value) {
+        getUniformVariable(name).set(value);
+    }
+
+    public void setUniformValue(String name, float value) {
+        getUniformVariable(name).set(value);
     }
 
     public class Uniform {
@@ -102,6 +106,10 @@ public class Program {
 
         public void set(int integer) {
             ARBShaderObjects.glUniform1iARB(location, integer);
+        }
+
+        public void set(float flt) {
+            ARBShaderObjects.glUniform1fARB(location, flt);
         }
     }
 }

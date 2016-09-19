@@ -1,5 +1,6 @@
 package com.replaymod.panostream.capture;
 
+import com.replaymod.panostream.PanoStreamMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.util.IChatComponent;
@@ -25,7 +26,7 @@ public class PanoramicScreenshotCapturer extends PanoramicFrameCapturer {
         if(panoramicFrame == null) return;
         if(event.phase != TickEvent.Phase.END) return;
 
-        doCapture(false);
+        doCapture(false, PanoStreamMod.instance.getPanoStreamSettings().stabilizeOutput.getValue());
 
         requested = false;
 
