@@ -2,12 +2,12 @@
   "required": true,
   "package": "com.replaymod.panostream.mixin",
   "mixins": [
+    "MixinClippingHelper",
     "MixinEntityRenderer",
     "MixinGuiIngame",
     "MixinGuiScreen",
     "MixinMinecraft"
   ],
   "server": [],
-  "client": [],
-  "refmap": "mixin.refmap.json"
+  "client": []
 }

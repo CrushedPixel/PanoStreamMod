@@ -12,7 +12,7 @@ buildscript {
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
-        classpath 'org.spongepowered:mixingradle:0.3-SNAPSHOT'
+        classpath 'org.spongepowered:mixingradle:0.4-SNAPSHOT'
     }
 }
 
@@ -32,6 +32,12 @@ targetCompatibility = 1.8
 version = "0.1"
 group= "com.replaymod"
 archivesBaseName = "panostream"
+
+ext {
+    mixinSrg = new File(project.buildDir, 'tmp/mixins/mixins.srg')
+    mixinRefMap = new File(project.buildDir, 'tmp/mixins/mixins.panostream.refmap.json')
+    libFiles = fileTree(dir: 'libs', includes: ['*.jar'])
+}
 
 minecraft {
     coreMod = 'com.replaymod.panostream.coremod.LoadingPlugin'
@@ -89,10 +95,13 @@ jar {
     }
 
     manifest {
-        attributes('FMLCorePluginContainsFMLMod': 'com.replaymod.panostream.coremod.LoadingPlugin',
-        'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
-        'TweakOrder': '0',
-        'FMLAT': 'panostream_at.cfg')
+        attributes(
+                'FMLCorePluginContainsFMLMod': 'com.replaymod.panostream.coremod.LoadingPlugin',
+                'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
+                'TweakOrder': '0',
+                'MixinConfigs': 'mixins.panostream.json',
+                'FMLAT': 'panostream_at.cfg'
+        )
     }
 }
 
