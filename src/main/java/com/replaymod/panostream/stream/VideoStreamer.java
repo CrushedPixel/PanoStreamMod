@@ -6,12 +6,16 @@ import com.replaymod.panostream.capture.PanoramicFrame;
 import com.replaymod.panostream.settings.PanoStreamSettings;
 import com.replaymod.panostream.utils.StringUtil;
 import lombok.Getter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class VideoStreamer {
+
+    private static final Logger LOGGER = LogManager.getLogger();
 
     @Getter
     private int fps;
@@ -20,7 +24,10 @@ public class VideoStreamer {
     private final StreamingThread streamingThread = new StreamingThread();
 
     public void toggleStream() {
-        if(streamingThread.isStopping()) return;
+        if(streamingThread.isStopping()) {
+            LOGGER.warn("Stream is already stopping!");
+            return;
+        }
 
         try {
             if(!streamingThread.isActive()) startStream(PanoStreamMod.instance.getPanoStreamSettings());
@@ -34,6 +41,8 @@ public class VideoStreamer {
         Preconditions.checkState(settings.videoWidth.getValue() == settings.videoHeight.getValue() * 2,
                 "Output video's aspect ratio has to be 2:1, is %sx%s",
                 settings.videoWidth.getValue(), settings.videoHeight.getValue());
+
+        LOGGER.info("Starting stream...");
 
         String commandArgs = settings.ffmpegArgs.getValue()
                 .replace("%WIDTH%", String.valueOf(settings.videoWidth.getValue()))
@@ -52,6 +61,7 @@ public class VideoStreamer {
     }
 
     private void stopStream() {
+        LOGGER.info("Stopping stream...");
         streamingThread.stopStreaming();
     }
 
