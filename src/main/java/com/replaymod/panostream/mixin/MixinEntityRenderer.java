@@ -1,7 +1,7 @@
 package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.capture.CaptureState;
-import net.minecraft.client.Minecraft;
+import com.replaymod.panostream.utils.ScaledResolutionUtil;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraft.client.renderer.GlStateManager;
@@ -65,7 +65,7 @@ public class MixinEntityRenderer {
         if(!CaptureState.isCapturing() || !CaptureState.isDistortGUI()) {
             GlStateManager.ortho(left, right, bottom, top, zNear, zFar);
         } else {
-            ScaledResolution sc = new ScaledResolution(Minecraft.getMinecraft(), Display.getWidth(), Display.getHeight());
+            ScaledResolution sc = ScaledResolutionUtil.createScaledResolution(Display.getWidth(), Display.getHeight());
 
             if(sc.getScaledWidth_double() > sc.getScaledHeight_double()) {
                 double diff = sc.getScaledWidth_double() - sc.getScaledHeight_double();
@@ -84,37 +84,5 @@ public class MixinEntityRenderer {
             aspect = 1;
         }
         Project.gluPerspective(fovY, aspect, zNear, zFar);
-    }
-
-    /* To rotate the hand for other frames, I'll have to figure out where to inject those calls
-    @Inject(method = "renderHand", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ItemRenderer;renderOverlays(F)V", ordinal = 0, shift = At.Shift.BY, by = 0))
-    private void doRenderHand(float someFloat, int someInt, CallbackInfo ci) {
-        //rotateHand();
-    }
-    */
-
-    private void rotateHand() {
-        if(CaptureState.isCapturing()) {
-            switch(CaptureState.getOrientation()) {
-                case FRONT:
-                    GlStateManager.rotate(0, 0.0F, 1.0F, 0.0F);
-                    break;
-                case RIGHT:
-                    GlStateManager.rotate(90, 0.0F, 1.0F, 0.0F);
-                    break;
-                case BACK:
-                    GlStateManager.rotate(180, 0.0F, 1.0F, 0.0F);
-                    break;
-                case LEFT:
-                    GlStateManager.rotate(-90, 0.0F, 1.0F, 0.0F);
-                    break;
-                case BOTTOM:
-                    GlStateManager.rotate(90, 1.0F, 0.0F, 0.0F);
-                    break;
-                case TOP:
-                    GlStateManager.rotate(-90, 1.0F, 0.0F, 0.0F);
-                    break;
-            }
-        }
     }
 }

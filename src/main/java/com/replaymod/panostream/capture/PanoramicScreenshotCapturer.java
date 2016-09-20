@@ -3,7 +3,7 @@ package com.replaymod.panostream.capture;
 import com.replaymod.panostream.PanoStreamMod;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.shader.Framebuffer;
-import net.minecraft.util.IChatComponent;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.ScreenShotHelper;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -53,7 +53,7 @@ public class PanoramicScreenshotCapturer extends PanoramicFrameCapturer {
         new Thread(() -> {
             final Framebuffer fb = capturePanoScreenshot();
             Minecraft.getMinecraft().addScheduledTask(() -> {
-                IChatComponent component = ScreenShotHelper.saveScreenshot(gameDirectory, 4 * 1080, 2 * 1080, fb);
+                ITextComponent component = ScreenShotHelper.saveScreenshot(gameDirectory, 4 * 1080, 2 * 1080, fb);
                 if(Minecraft.getMinecraft().thePlayer != null) Minecraft.getMinecraft().thePlayer.addChatComponentMessage(component);
             });
         }).start();

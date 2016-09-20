@@ -9,5 +9,6 @@
     "MixinMinecraft"
   ],
   "server": [],
-  "client": []
+  "client": [],
+  "compatibilityLevel": "JAVA_8"
 }

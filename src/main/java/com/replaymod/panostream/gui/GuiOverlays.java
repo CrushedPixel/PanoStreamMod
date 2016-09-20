@@ -34,7 +34,7 @@ public class GuiOverlays extends Registerable<GuiOverlays> {
         GlStateManager.enableBlend();
         GlStateManager.color(1, 1, 1);
 
-        int width = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight).getScaledWidth();
+        int width = new ScaledResolution(mc).getScaledWidth();
 
         int x = width - 10 - 16;
         int y = 10;

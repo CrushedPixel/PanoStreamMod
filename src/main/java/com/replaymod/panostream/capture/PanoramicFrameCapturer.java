@@ -78,10 +78,10 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
         int widthBefore = mc.displayWidth;
         int heightBefore = mc.displayHeight;
 
-        mc.displayWidth = mc.displayHeight = panoramicFrame.getFrameSize();
-
         //calculate the mouse location on the distorted gui
-        ScaledResolution actualResolution = new ScaledResolution(mc, widthBefore, heightBefore);
+        ScaledResolution actualResolution = new ScaledResolution(mc);
+
+        mc.displayWidth = mc.displayHeight = panoramicFrame.getFrameSize();
 
         int mouseX = Mouse.getX() * actualResolution.getScaledWidth() / widthBefore;
         int mouseY = actualResolution.getScaledHeight() - Mouse.getY() * actualResolution.getScaledHeight() / heightBefore - 1;
