@@ -115,7 +115,7 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
     }
 
     private void renderWorld() {
-        if(mc.theWorld == null) return;
+        if(mc.world == null) return;
         //rendering the world with as little overweight function calls as possible
         GlStateManager.enableDepth();
         GlStateManager.enableAlpha();
@@ -137,10 +137,10 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
             }
         } else {
             //temporarily replace Minecraft's framebuffer with our framebuffer as GuiMainMenu explicitly binds it
-            Framebuffer before = mc.framebufferMc;
-            mc.framebufferMc = panoramicFrame.getFramebuffer(0);
+            Framebuffer before = mc.framebuffer;
+            mc.framebuffer = panoramicFrame.getFramebuffer(0);
 
-            if(mc.thePlayer != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
+            if(mc.player != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
             if(mc.currentScreen != null) {
                 CaptureState.setDistortGUI(true);
                 mc.entityRenderer.setupOverlayRendering(); //re-setup overlay rendering with distortion enabled
@@ -149,7 +149,7 @@ public class PanoramicFrameCapturer extends Registerable<PanoramicFrameCapturer>
                 ForgeHooksClient.drawScreen(mc.currentScreen, mouseX, mouseY, mc.timer.renderPartialTicks);
             }
 
-            mc.framebufferMc = before;
+            mc.framebuffer = before;
         }
     }
 

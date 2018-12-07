@@ -30,7 +30,7 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
 
     // a constant to align GuiLabel elements to be centered
     // next to GuiButtons, GuiTextFields etc (which have a height of 20px)
-    private final double TEXT_ALIGNMENT = 1 - Minecraft.getMinecraft().fontRendererObj.FONT_HEIGHT / 20d;
+    private final double TEXT_ALIGNMENT = 1 - Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT / 20d;
 
     public GuiPanoStreamSettings(final net.minecraft.client.gui.GuiScreen parent,
                                  PanoStreamSettings panoStreamSettings) {
