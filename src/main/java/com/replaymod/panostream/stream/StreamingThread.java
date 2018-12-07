@@ -33,7 +33,7 @@ public class StreamingThread {
 
     private ByteArrayOutputStream ffmpegLog = new ByteArrayOutputStream(4096);
 
-    private boolean stopWriting = false;
+    private AtomicBoolean stopWriting = new AtomicBoolean(false);
 
     private AtomicBoolean active = new AtomicBoolean(false);
 
@@ -58,12 +58,12 @@ public class StreamingThread {
     }
 
     public boolean isStopping() {
-        return stopWriting && isActive();
+        return stopWriting.get() && isActive();
     }
 
     public void streamToFFmpeg(VideoStreamer videoStreamer, List<String> command) {
         Preconditions.checkState(!active.get());
-        stopWriting = false;
+        stopWriting.set(false);
 
         active.set(true);
 
@@ -104,7 +104,7 @@ public class StreamingThread {
 
     public void offerFrame(PanoramicFrame frame) {
         Preconditions.checkState(active.get());
-        Preconditions.checkState(!stopWriting);
+        Preconditions.checkState(!stopWriting.get());
 
         //if the frameQueue is too full, we remove one element before adding our new element
         if(frameQueue.size() > MAX_FRAME_BUFFER) {
@@ -117,8 +117,8 @@ public class StreamingThread {
 
     public void stopStreaming() {
         Preconditions.checkState(active.get());
-        Preconditions.checkState(!stopWriting);
-        stopWriting = true;
+        Preconditions.checkState(!stopWriting.get());
+        stopWriting.set(true);
     }
 
     private boolean startFFmpeg(List<String> command) {
@@ -143,10 +143,14 @@ public class StreamingThread {
     }
 
     private boolean streamVideo() {
-        while(!stopWriting || !frameQueue.isEmpty()) {
+        while(true) {
             try {
-                while(frameQueue.isEmpty()) {
+                while(!stopWriting.get() && frameQueue.isEmpty()) {
                     Thread.sleep(10L);
+                }
+
+                if (stopWriting.get()) {
+                    return true;
                 }
 
                 channel.write(frameQueue.poll());
@@ -164,8 +168,6 @@ public class StreamingThread {
                 return false;
             }
         }
-
-        return true;
     }
 
     private void stopFFmpeg() {
