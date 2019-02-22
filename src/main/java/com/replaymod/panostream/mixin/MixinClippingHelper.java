@@ -1,7 +1,7 @@
 package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.PanoStreamMod;
-import com.replaymod.panostream.capture.CaptureState;
+import com.replaymod.panostream.capture.equi.CaptureState;
 import net.minecraft.client.renderer.culling.ClippingHelper;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

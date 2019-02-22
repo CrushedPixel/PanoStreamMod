@@ -2,7 +2,6 @@ package com.replaymod.panostream.stream;
 
 import com.google.common.base.Preconditions;
 import com.replaymod.panostream.PanoStreamMod;
-import com.replaymod.panostream.capture.PanoramicFrame;
 import com.replaymod.panostream.settings.PanoStreamSettings;
 import com.replaymod.panostream.utils.StringUtil;
 import lombok.Getter;
@@ -10,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,15 +24,15 @@ public class VideoStreamer {
     private final StreamingThread streamingThread = new StreamingThread();
 
     public void toggleStream() {
-        if(streamingThread.isStopping()) {
+        if (streamingThread.isStopping()) {
             LOGGER.warn("Stream is already stopping!");
             return;
         }
 
         try {
-            if(!streamingThread.isActive()) startStream(PanoStreamMod.instance.getPanoStreamSettings());
+            if (!streamingThread.isActive()) startStream(PanoStreamMod.instance.getPanoStreamSettings());
             else stopStream();
-        } catch(IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -65,7 +65,7 @@ public class VideoStreamer {
         streamingThread.stopStreaming();
     }
 
-    public synchronized void writeFrameToStream(PanoramicFrame frame) {
+    public synchronized void writeFrameToStream(ByteBuffer frame) {
         streamingThread.offerFrame(frame);
     }
 

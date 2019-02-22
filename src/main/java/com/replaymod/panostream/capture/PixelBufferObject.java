@@ -1,5 +1,6 @@
 package com.replaymod.panostream.capture;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import net.minecraft.client.Minecraft;
 import org.apache.logging.log4j.LogManager;
@@ -25,10 +26,11 @@ public class PixelBufferObject {
     private static ThreadLocal<Integer> bound = new ThreadLocal<Integer>();
     private static ThreadLocal<Integer> mapped = new ThreadLocal<Integer>();
 
-    private final long size;
+    @Getter
+    private final int size;
     private long handle;
 
-    public PixelBufferObject(long size, Usage usage) {
+    public PixelBufferObject(int size, Usage usage) {
         if (!SUPPORTED) {
             throw new UnsupportedOperationException("PBOs not supported.");
         }

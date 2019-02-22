@@ -1,4 +1,4 @@
-package com.replaymod.panostream.shader;
+package com.replaymod.panostream.capture;
 
 
 import net.minecraft.client.Minecraft;
@@ -6,6 +6,7 @@ import net.minecraft.client.resources.IResource;
 import net.minecraft.util.ResourceLocation;
 import org.apache.commons.io.IOUtils;
 import org.lwjgl.opengl.ARBFragmentShader;
+import org.lwjgl.opengl.ARBGeometryShader4;
 import org.lwjgl.opengl.ARBShaderObjects;
 import org.lwjgl.opengl.ARBVertexShader;
 import org.lwjgl.opengl.GL11;
@@ -45,21 +46,20 @@ public class Program {
         try {
             shader = glCreateShaderObjectARB(shaderType);
 
-            if(shader == 0)
+            if (shader == 0)
                 throw new Exception("glCreateShaderObjectARB failed");
 
             IResource resource = Minecraft.getMinecraft().getResourceManager().getResource(resourceLocation);
-            try(InputStream is = resource.getInputStream()) {
+            try (InputStream is = resource.getInputStream()) {
                 glShaderSourceARB(shader, IOUtils.toString(is));
             }
             glCompileShaderARB(shader);
 
-            if(glGetObjectParameteriARB(shader, GL_OBJECT_COMPILE_STATUS_ARB) == GL11.GL_FALSE)
+            if (glGetObjectParameteriARB(shader, GL_OBJECT_COMPILE_STATUS_ARB) == GL11.GL_FALSE)
                 throw new RuntimeException("Error creating shader: " + getLogInfo(shader));
 
             return shader;
-        }
-        catch(Exception exc) {
+        } catch (Exception exc) {
             glDeleteObjectARB(shader);
             throw exc;
         }

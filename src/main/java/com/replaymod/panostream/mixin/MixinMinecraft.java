@@ -1,6 +1,6 @@
 package com.replaymod.panostream.mixin;
 
-import com.replaymod.panostream.capture.PanoramicScreenshotCapturer;
+import com.replaymod.panostream.capture.vr180.VR180ScreenshotCapturer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.shader.Framebuffer;
@@ -16,12 +16,12 @@ import java.io.File;
 @Mixin(Minecraft.class)
 public class MixinMinecraft {
 
-    private static PanoramicScreenshotCapturer screenshotCapturer;
+    private static VR180ScreenshotCapturer screenshotCapturer;
 
     @Redirect(method = "dispatchKeypresses", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/ScreenShotHelper;saveScreenshot(Ljava/io/File;IILnet/minecraft/client/shader/Framebuffer;)Lnet/minecraft/util/text/ITextComponent;"))
     private ITextComponent redirectScreenshot(File gameDirectory, int width, int height, Framebuffer buffer) {
         if(screenshotCapturer == null) {
-            screenshotCapturer = new PanoramicScreenshotCapturer();
+            screenshotCapturer = new VR180ScreenshotCapturer();
             screenshotCapturer.register();
         }
 

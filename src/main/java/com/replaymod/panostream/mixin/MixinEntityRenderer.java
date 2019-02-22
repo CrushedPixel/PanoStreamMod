@@ -1,6 +1,6 @@
 package com.replaymod.panostream.mixin;
 
-import com.replaymod.panostream.capture.CaptureState;
+import com.replaymod.panostream.capture.equi.CaptureState;
 import com.replaymod.panostream.utils.ScaledResolutionUtil;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.EntityRenderer;
@@ -81,6 +81,7 @@ public class MixinEntityRenderer {
         //normalizing the FOV for capturing of cubic frames
         if(CaptureState.isCapturing()) {
             fovY = 90;
+            // TODO: could be 150 in case we're rendering the other way
             aspect = 1;
         }
         Project.gluPerspective(fovY, aspect, zNear, zFar);

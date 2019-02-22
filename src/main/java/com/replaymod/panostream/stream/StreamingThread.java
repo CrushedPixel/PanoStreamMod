@@ -2,8 +2,8 @@ package com.replaymod.panostream.stream;
 
 import com.google.common.base.Preconditions;
 import com.replaymod.panostream.PanoStreamMod;
-import com.replaymod.panostream.capture.PanoramicFrame;
-import com.replaymod.panostream.capture.PanoramicFrameCapturer;
+import com.replaymod.panostream.capture.FrameCapturer;
+import com.replaymod.panostream.capture.equi.EquirectangularFrameCapturer;
 import com.replaymod.panostream.utils.FrameSizeUtil;
 import com.replaymod.panostream.utils.StreamPipe;
 import lombok.Getter;
@@ -49,7 +49,7 @@ public class StreamingThread {
     @Getter
     private int framesWritten;
 
-    private PanoramicFrameCapturer panoramicFrameCapturer;
+    private FrameCapturer frameCapturer;
 
     private ConcurrentLinkedQueue<ByteBuffer> frameQueue;
 
@@ -67,51 +67,52 @@ public class StreamingThread {
 
         active.set(true);
 
-        //destroying the old panoramicFrameCapturer if existent
-        if(panoramicFrameCapturer != null) {
-            Minecraft.getMinecraft().addScheduledTask(panoramicFrameCapturer::destroy);
-        }
+        Minecraft.getMinecraft().addScheduledTask(() -> {
+            // destroy the old panoramicFrameCapturer if existent
+            if (frameCapturer != null) {
+                frameCapturer.destroy();
+            }
 
-        new Thread(() -> {
-            //starting the PanoramicFrameCapturer
-            panoramicFrameCapturer = new PanoramicFrameCapturer(
+            // TODO: VR180
+            frameCapturer = new EquirectangularFrameCapturer(
                     FrameSizeUtil.singleFrameSize(PanoStreamMod.instance.getPanoStreamSettings().videoWidth.getValue()),
                     videoStreamer.getFps(), videoStreamer).register();
 
-            boolean result = false;
-            reconnectionAttempts = 0;
+            new Thread(() -> {
+                // start the EquirectangularFrameCapturer
+                boolean result = false;
+                reconnectionAttempts = 0;
 
-            while(!result && reconnectionAttempts++ < MAX_RECONNECTION_ATTEMPTS) {
-                if(result = startFFmpeg(command)) {
-                    panoramicFrameCapturer.setActive(true);
-                    result = streamVideo();
-                    panoramicFrameCapturer.setActive(false);
-                    stopFFmpeg();
+                while (!result && reconnectionAttempts++ < MAX_RECONNECTION_ATTEMPTS) {
+                    if (result = startFFmpeg(command)) {
+                        frameCapturer.setActive(true);
+                        result = streamVideo();
+                        frameCapturer.setActive(false);
+                        stopFFmpeg();
+                    }
+
+                    if (!result) {
+                        state = State.RECONNECTING;
+                    }
                 }
 
-                if(!result) {
-                    state = State.RECONNECTING;
-                }
-            }
+                state = result ? State.DISABLED : State.FAILED;
+                finishTime = System.currentTimeMillis();
 
-            state = result ? State.DISABLED : State.FAILED;
-            finishTime = System.currentTimeMillis();
-
-            active.set(false);
-        }).start();
-
+                active.set(false);
+            }).start();
+        });
     }
 
-    public void offerFrame(PanoramicFrame frame) {
+    public void offerFrame(ByteBuffer buf) {
         Preconditions.checkState(active.get());
         Preconditions.checkState(!stopWriting.get());
 
         //if the frameQueue is too full, we remove one element before adding our new element
-        if(frameQueue.size() > MAX_FRAME_BUFFER) {
+        if (frameQueue.size() > MAX_FRAME_BUFFER) {
             frameQueue.poll();
         }
 
-        ByteBuffer buf = frame.getByteBuffer();
         frameQueue.offer(buf);
     }
 
@@ -136,16 +137,16 @@ public class StreamingThread {
             frameQueue = new ConcurrentLinkedQueue<>();
 
             return true;
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
     }
 
     private boolean streamVideo() {
-        while(true) {
+        while (true) {
             try {
-                while(!stopWriting.get() && frameQueue.isEmpty()) {
+                while (!stopWriting.get() && frameQueue.isEmpty()) {
                     Thread.sleep(10L);
                 }
 
@@ -157,13 +158,13 @@ public class StreamingThread {
 
                 // if two frames have been successfully written,
                 // the pipe hasn't been closed after writing the first frame
-                if(framesWritten++ > 1) {
+                if (framesWritten++ > 1) {
                     state = State.STREAMING;
                     reconnectionAttempts = 0;
                 }
-            } catch(InterruptedException e) {
+            } catch (InterruptedException e) {
                 e.printStackTrace();
-            } catch(Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 return false;
             }
@@ -173,7 +174,7 @@ public class StreamingThread {
     private void stopFFmpeg() {
         try {
             channel.close();
-        } catch(IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
@@ -184,7 +185,7 @@ public class StreamingThread {
             try {
                 ffmpegProcess.exitValue();
                 break;
-            } catch(IllegalThreadStateException ex) {
+            } catch (IllegalThreadStateException ex) {
                 if (rem > 0) {
                     try {
                         Thread.sleep(Math.min(TimeUnit.NANOSECONDS.toMillis(rem) + 1, 100));
