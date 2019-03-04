@@ -12,6 +12,7 @@ import de.johni0702.minecraft.gui.element.GuiNumberField;
 import de.johni0702.minecraft.gui.element.GuiTextField;
 import de.johni0702.minecraft.gui.element.GuiTexturedButton;
 import de.johni0702.minecraft.gui.element.GuiTooltip;
+import de.johni0702.minecraft.gui.element.advanced.GuiDropdownMenu;
 import de.johni0702.minecraft.gui.function.Focusable;
 import de.johni0702.minecraft.gui.layout.CustomLayout;
 import de.johni0702.minecraft.gui.layout.GridLayout;
@@ -19,6 +20,7 @@ import de.johni0702.minecraft.gui.layout.HorizontalLayout;
 import de.johni0702.minecraft.gui.utils.Utils;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.I18n;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +34,8 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
     // next to GuiButtons, GuiTextFields etc (which have a height of 20px)
     private final double TEXT_ALIGNMENT = 1 - Minecraft.getMinecraft().fontRenderer.FONT_HEIGHT / 20d;
 
+    private GuiNumberField widthField, heightField;
+
     public GuiPanoStreamSettings(final net.minecraft.client.gui.GuiScreen parent,
                                  PanoStreamSettings panoStreamSettings) {
 
@@ -39,6 +43,30 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
 
         final GuiPanel mainPanel = new GuiPanel(this).setLayout(
                 new GridLayout().setCellsEqualSize(false).setSpacingX(10).setSpacingY(10).setColumns(3));
+
+        GuiDropdownMenu<String> modeDropdown = new GuiDropdownMenu<String>()
+                .setSelected(panoStreamSettings.vr180.getValue() ? 1 : 0)
+                .setValues(I18n.format("panostream.gui.settings.mode.360"), I18n.format("panostream.gui.settings.mode.vr180"))
+                .onSelection(i -> {
+                    if (i == 0 ^ heightField.getInteger() == widthField.getInteger() / 2) {
+                        int tmp = widthField.getInteger();
+                        widthField.setValue(heightField.getInteger());
+                        heightField.setValue(tmp);
+                    }
+                });
+        new SettingsRow("panostream.gui.settings.mode", modeDropdown) {
+
+            @Override
+            void applySetting() {
+                panoStreamSettings.vr180.setValue(((GuiDropdownMenu) inputElement).getSelected() == 1);
+            }
+
+            @Override
+            void restoreDefault() {
+                ((GuiDropdownMenu) inputElement).setSelected(panoStreamSettings.vr180.getDefault() ? 1 : 0);
+            }
+
+        }.addToCollection(settingRows).addTo(mainPanel, new GridLayout.Data(0, TEXT_ALIGNMENT));
 
         new SettingsRow("panostream.gui.settings.stabilize",
                 new GuiCheckbox().setChecked(panoStreamSettings.stabilizeOutput.getValue())) {
@@ -73,7 +101,6 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
         new SettingsRow("panostream.gui.settings.resolution",
                 new GuiPanel().setLayout(new HorizontalLayout().setSpacing(5))) {
 
-            private GuiNumberField widthField, heightField;
 
             {
                 GuiPanel panel = (GuiPanel)inputElement;
@@ -84,8 +111,12 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
                         .setHeight(20)
                         .setValidateOnFocusChange(true)
                         .onTextChanged(obj -> {
-                            heightField.setValue(widthField.getInteger() / 2);
-                            widthField.setValue(heightField.getInteger() * 2);
+                            if (modeDropdown.getSelected() == 0) {
+                                heightField.setValue(widthField.getInteger() / 2);
+                                widthField.setValue(heightField.getInteger() * 2);
+                            } else {
+                                heightField.setValue(widthField.getInteger() * 2);
+                            }
                         });
 
                 heightField = new GuiNumberField().setValue(panoStreamSettings.videoHeight.getValue()).setWidth(50)
@@ -98,7 +129,12 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
                             if (heightField.getInteger() < 100) heightField.setValue(100);
                         })
                         .onTextChanged(obj -> {
-                            widthField.setValue(heightField.getInteger() * 2);
+                            if (modeDropdown.getSelected() == 0) {
+                                widthField.setValue(heightField.getInteger() * 2);
+                            } else {
+                                widthField.setValue(heightField.getInteger() / 2);
+                                heightField.setValue(widthField.getInteger() * 2);
+                            }
                         });
 
                 panel.addElements(null, widthField)

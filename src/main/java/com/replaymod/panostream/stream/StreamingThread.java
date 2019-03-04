@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.replaymod.panostream.PanoStreamMod;
 import com.replaymod.panostream.capture.FrameCapturer;
 import com.replaymod.panostream.capture.equi.EquirectangularFrameCapturer;
+import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import com.replaymod.panostream.utils.ByteBufferPool;
 import com.replaymod.panostream.utils.FrameSizeUtil;
 import com.replaymod.panostream.utils.StreamPipe;
@@ -62,7 +63,7 @@ public class StreamingThread {
         return stopWriting.get() && isActive();
     }
 
-    public void streamToFFmpeg(VideoStreamer videoStreamer, List<String> command) {
+    public void streamToFFmpeg(VideoStreamer videoStreamer, boolean vr180, List<String> command) {
         Preconditions.checkState(!active.get());
         stopWriting.set(false);
 
@@ -74,10 +75,14 @@ public class StreamingThread {
                 frameCapturer.destroy();
             }
 
-            // TODO: VR180
-            frameCapturer = new EquirectangularFrameCapturer(
-                    FrameSizeUtil.singleFrameSize(PanoStreamMod.instance.getPanoStreamSettings().videoWidth.getValue()),
-                    videoStreamer.getFps(), videoStreamer).register();
+            if (vr180) {
+                frameCapturer = new VR180FrameCapturer(PanoStreamMod.instance.getPanoStreamSettings().videoWidth.getValue(),
+                        videoStreamer.getFps(), videoStreamer).register();
+            } else {
+                frameCapturer = new EquirectangularFrameCapturer(
+                        FrameSizeUtil.singleFrameSize(PanoStreamMod.instance.getPanoStreamSettings().videoWidth.getValue()),
+                        videoStreamer.getFps(), videoStreamer).register();
+            }
 
             new Thread(() -> {
                 // start the EquirectangularFrameCapturer

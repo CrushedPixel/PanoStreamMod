@@ -38,9 +38,15 @@ public class VideoStreamer {
     }
 
     private void startStream(PanoStreamSettings settings) throws IOException {
-        Preconditions.checkState(settings.videoWidth.getValue() == settings.videoHeight.getValue() * 2,
-                "Output video's aspect ratio has to be 2:1, is %sx%s",
-                settings.videoWidth.getValue(), settings.videoHeight.getValue());
+        if (settings.vr180.getValue()) {
+            Preconditions.checkState(settings.videoWidth.getValue() * 2 == settings.videoHeight.getValue(),
+                    "Output video's aspect ratio has to be 1:2, is %sx%s",
+                    settings.videoWidth.getValue(), settings.videoHeight.getValue());
+        } else {
+            Preconditions.checkState(settings.videoWidth.getValue() == settings.videoHeight.getValue() * 2,
+                    "Output video's aspect ratio has to be 2:1, is %sx%s",
+                    settings.videoWidth.getValue(), settings.videoHeight.getValue());
+        }
 
         LOGGER.info("Starting stream...");
 
@@ -57,7 +63,7 @@ public class VideoStreamer {
         command.add(ffmpegCommand);
         command.addAll(StringUtil.translateCommandline(commandArgs));
 
-        streamingThread.streamToFFmpeg(this, command);
+        streamingThread.streamToFFmpeg(this, settings.vr180.getValue(), command);
     }
 
     private void stopStream() {

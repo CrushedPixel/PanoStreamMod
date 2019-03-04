@@ -1,34 +1,50 @@
-#version 110
+#version 130
 
-varying vec4 vertColor;
-varying vec4 textureCoord;
-varying vec4 lightMapCoord;
+out vec4 vertColorV;
+out vec2 textureCoordV;
+out vec2 lightMapCoordV;
+flat out mat4 projectionMatrix;
 
-uniform float thetaFactor;
-uniform float phiFactor;
-uniform float zedFactor;
+uniform bool leftEye;
+uniform bool overlay;
+uniform float ipd;
 
 void main() {
     // Transform to view space
     vec4 pos = gl_ModelViewMatrix * gl_Vertex;
+    if (overlay) {
+        // When rendering with orthographic projection, immediately apply the projection matrix
+        pos = gl_ProjectionMatrix * pos;
+        pos /= pos.w;
+        // and position the result (NDC) such that (0, 0, 0) is right in front of the camera at one block distance
+        pos.z *= 0.01; // but almost flat
+        pos.z *= -1.0; // forward for NDC is towards positive but per OpenGL convention it should be towards negative
+        pos += vec4(0.0, 0.0, -1.0, 0.0);
+        // finally, pretend we were doing perspective projection all along
+        float n = 0.01;
+        float f = 2.0;
+        float l = n; // take up 90 degree of FOV
+        float t = l; // in either direction
+        projectionMatrix[0] = vec4(n/l, 0.0, 0.0, 0.0);
+        projectionMatrix[1] = vec4(0.0, n/t, 0.0, 0.0);
+        projectionMatrix[2] = vec4(0.0, 0.0, -(f+n)/(f-n), -1.0);
+        projectionMatrix[3] = vec4(0.0, 0.0, -2.0*f*n/(f-n), 0.0);
+    } else {
+        projectionMatrix = gl_ProjectionMatrix;
+    }
 
-    // Distort for VR180 (dark magic)
-    float r = length(pos.xyz);
-    vec3 ray = pos.xyz / r;
-    float theta = atan(ray.x, ray.z);
-    float phi = asin(ray.y);
+    // Offset for stereoscopy
+    if (leftEye) {
+        pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+    } else {
+        pos += vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+    }
 
-    vec3 newRay = vec3(theta * thetaFactor, phi * phiFactor, zedFactor);
-    newRay = normalize(newRay) * r;
-
-    pos = vec4(newRay, 1.0);
-
-    // Transform to screen space
-    gl_Position = gl_ProjectionMatrix * pos;
+    gl_Position = pos;
 
     // Misc.
-    textureCoord = gl_TextureMatrix[0] * gl_MultiTexCoord0;
-    lightMapCoord = gl_TextureMatrix[1] * gl_MultiTexCoord1;
-    vertColor = gl_Color;
+    textureCoordV = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
+    lightMapCoordV = (gl_TextureMatrix[1] * gl_MultiTexCoord1).st;
+    vertColorV = gl_Color;
     gl_FogFragCoord = sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
 }

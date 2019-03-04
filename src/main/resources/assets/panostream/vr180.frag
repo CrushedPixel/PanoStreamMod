@@ -5,8 +5,8 @@
 // Originally written by johni0702 for the Minecraft ReplayMod.
 
 varying vec4 vertColor;
-varying vec4 textureCoord;
-varying vec4 lightMapCoord;
+varying vec2 textureCoord;
+varying vec2 lightMapCoord;
 
 uniform sampler2D texture;
 uniform sampler2D lightMap;
@@ -20,11 +20,11 @@ void main() {
     vec4 color = vertColor;
 
     if (textureEnabled) {
-        color *= texture2D(texture, textureCoord.st);
+        color *= texture2D(texture, textureCoord);
     }
 
     if (lightMapEnabled) {
-        color *= texture2D(lightMap, lightMapCoord.st);
+        color *= texture2D(lightMap, lightMapCoord);
     }
 
     if (hurtTextureEnabled) {

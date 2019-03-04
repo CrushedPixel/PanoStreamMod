@@ -2,12 +2,13 @@ package com.replaymod.panostream.settings;
 
 import eu.crushedpixel.minecraft.simpleconfig.BooleanSetting;
 import eu.crushedpixel.minecraft.simpleconfig.ConfigSettings;
+import eu.crushedpixel.minecraft.simpleconfig.DoubleSetting;
 import eu.crushedpixel.minecraft.simpleconfig.IntegerSetting;
 import eu.crushedpixel.minecraft.simpleconfig.StringSetting;
 import net.minecraftforge.common.config.Configuration;
 
 public class PanoStreamSettings extends ConfigSettings {
-    
+
     public IntegerSetting fps = new IntegerSetting(30);
 
     public IntegerSetting videoWidth = new IntegerSetting(2160);
@@ -22,6 +23,10 @@ public class PanoStreamSettings extends ConfigSettings {
     public StringSetting rtmpServer = new StringSetting("rtmp://localhost/panostream/live");
 
     public BooleanSetting stabilizeOutput = new BooleanSetting(true);
+
+    public BooleanSetting vr180 = new BooleanSetting(false);
+
+    public DoubleSetting ipd = new DoubleSetting(0.25);
 
     public PanoStreamSettings(Configuration config) {
         super(config);

@@ -55,9 +55,12 @@ public class VR180Frame extends ComposedFrame {
         return fb;
     }
 
+    public Framebuffer getFramebuffer(boolean left) {
+        return left ? leftEye : rightEye;
+    }
+
     public void bindFramebuffer(boolean left) {
-        Framebuffer fb = left ? leftEye : rightEye;
-        fb.bindFramebuffer(true);
+        getFramebuffer(left).bindFramebuffer(true);
     }
 
     public void composeTopBottom(boolean flip) {

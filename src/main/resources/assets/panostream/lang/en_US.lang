@@ -2,17 +2,22 @@ panostream.title=PanoStream Mod
 
 panostream.gui.settings.title=PanoStream Mod Settings
 
+panostream.gui.settings.mode.title=Mode
 panostream.gui.settings.stabilize.title=Stabilize output
 panostream.gui.settings.rtmpaddress.title=RTMP Server Address
 panostream.gui.settings.resolution.title=Stream Resolution
 panostream.gui.settings.fps.title=FPS Limit
 panostream.gui.settings.ffmpeg.title=FFmpeg Configuration
 
+panostream.gui.settings.mode.info=The type of panoramic video to create.
 panostream.gui.settings.stabilize.info=Stabilizes the output image to only rotate when the user wants to instead of forcing head motion. This is recommended to avoid nausea.
 panostream.gui.settings.rtmpaddress.info=The RTMP server to send the output stream to.
 panostream.gui.settings.resolution.info=The resolution of the output stream. The aspect ratio is forced to be 2:1
 panostream.gui.settings.fps.info=The maximum FPS of the output stream.
 panostream.gui.settings.ffmpeg.info=The FFmpeg command line arguments used to create the output stream. Don't mess with this unless you know what you're doing.
+
+panostream.gui.settings.mode.360=360°
+panostream.gui.settings.mode.vr180=VR180
 
 panostream.input.keybindpanostreamsettings=Open PanoStream Settings
 panostream.input.keybindtogglestreaming=Start/Stop Streaming

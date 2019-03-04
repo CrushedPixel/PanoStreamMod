@@ -1,5 +1,6 @@
 package com.replaymod.panostream.capture.vr180;
 
+import com.replaymod.panostream.PanoStreamMod;
 import com.replaymod.panostream.capture.ComposedFrame;
 import com.replaymod.panostream.capture.FrameCapturer;
 import com.replaymod.panostream.capture.Program;
@@ -7,14 +8,21 @@ import com.replaymod.panostream.capture.equi.CaptureState;
 import com.replaymod.panostream.capture.equi.EquirectangularFrameCapturer;
 import com.replaymod.panostream.stream.VideoStreamer;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.util.ReportedException;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.Vec3d;
+import net.minecraftforge.client.ForgeHooksClient;
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
 
 import java.nio.ByteBuffer;
 
 import static net.minecraft.client.renderer.GlStateManager.BooleanState;
+import static net.minecraft.client.renderer.GlStateManager.enableDepth;
 
 public class VR180FrameCapturer extends FrameCapturer {
 
@@ -22,6 +30,7 @@ public class VR180FrameCapturer extends FrameCapturer {
      * Resource locations of the VR180 shader
      */
     private static final ResourceLocation VERTEX_SHADER = new ResourceLocation("panostream", "vr180.vert");
+    private static final ResourceLocation GEOMETRY_SHADER = new ResourceLocation("panostream", "vr180.geom");
     private static final ResourceLocation FRAGMENT_SHADER = new ResourceLocation("panostream", "vr180.frag");
 
     private final Minecraft mc = Minecraft.getMinecraft();
@@ -41,7 +50,7 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         // initialize VR180 shader
         try {
-            shaderProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER);
+            shaderProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER);
             shaderProgram.use();
 
             double localFov = Math.PI / 8; /*(90 / 2) * Math.PI / 180*/;
@@ -54,7 +63,7 @@ public class VR180FrameCapturer extends FrameCapturer {
 
             double theta = aspect * tanLocalFov * meshFov;
             double phi = tanLocalFov / meshFov;
-            double zed = aspect * tanRemoteFov * -1;
+            double zed = aspect * tanRemoteFov;
 
             thetaFactor = shaderProgram.getUniformVariable("thetaFactor");
             thetaFactor.set((float) theta);
@@ -127,10 +136,16 @@ public class VR180FrameCapturer extends FrameCapturer {
         int widthBefore = mc.displayWidth;
         int heightBefore = mc.displayHeight;
 
+        ScaledResolution userResolution = new ScaledResolution(mc);
+        int mouseX = Mouse.getX() * userResolution.getScaledWidth() / mc.displayWidth;
+        int mouseY = userResolution.getScaledHeight() - Mouse.getY() * userResolution.getScaledHeight() / mc.displayHeight;
+
         mc.displayWidth = mc.displayHeight = vr180Frame.getFrameSize();
 
         // use the VR180 shader
         shaderProgram.use();
+
+        shaderProgram.getUniformVariable("ipd").set(PanoStreamMod.instance.getPanoStreamSettings().ipd.getValue().floatValue());
 
         // link the GlStateManager's BooleanStates to the fragment shader's uniforms
         linkState(0, "textureEnabled");
@@ -150,15 +165,18 @@ public class VR180FrameCapturer extends FrameCapturer {
         };
 
         // render left eye
+        final Program.Uniform leftEyeUniform = shaderProgram.getUniformVariable("leftEye");
+        leftEyeUniform.set(true);
         vr180Frame.bindFramebuffer(true);
         renderWorld();
-        // TODO: render overlays
+        renderOverlays(true, mouseX, mouseY);
         ComposedFrame.unbindFramebuffer();
 
         // render right eye
-        // TODO: move camera by IPD
+        leftEyeUniform.set(false);
         vr180Frame.bindFramebuffer(false);
         renderWorld();
+        renderOverlays(false, mouseX, mouseY);
         ComposedFrame.unbindFramebuffer();
 
         // unhook BooleanStates
@@ -181,13 +199,50 @@ public class VR180FrameCapturer extends FrameCapturer {
 
     private void renderWorld() {
         // TODO: DRY with EquirectangularFrameCapturer if possible (base class method?)
-        if (mc.world == null) return;
+        if (mc.world == null) {
+            GlStateManager.clearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            return;
+        }
+
         // render the world with as little overweight function calls as possible
         GlStateManager.enableDepth();
         GlStateManager.enableAlpha();
         GlStateManager.alphaFunc(516, 0.5F);
 
+        shaderProgram.getUniformVariable("overlay").set(false);
+
         mc.entityRenderer.renderWorldPass(2, mc.timer.elapsedPartialTicks, 0);
+    }
+
+    private void renderOverlays(boolean left, int mouseX, int mouseY) {
+        if (this.mc.gameSettings.hideGUI && this.mc.currentScreen == null) return;
+
+        shaderProgram.getUniformVariable("overlay").set(true);
+
+        GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
+
+        // We disable depth testing in the GUI since MC seems to rely on EQ to pass which we cannot guarantee.
+        // Even though this isn't the default, less GUIs are broken this way and those that are can be manually fixed
+        //disableDepth();
+
+        // temporarily replace Minecraft's framebuffer with our framebuffer as GuiMainMenu explicitly binds it
+        Framebuffer before = mc.framebuffer;
+        try {
+            mc.framebuffer = vr180Frame.getFramebuffer(left);
+
+            if (mc.player != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
+            if (mc.currentScreen != null) {
+                CaptureState.setDistortGUI(true);
+                mc.entityRenderer.setupOverlayRendering(); //re-setup overlay rendering with distortion enabled
+                CaptureState.setDistortGUI(false);
+                GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
+                ForgeHooksClient.drawScreen(mc.currentScreen, mouseX, mouseY, mc.timer.renderPartialTicks);
+            }
+        } finally {
+            mc.framebuffer = before;
+            enableDepth();
+        }
     }
 
     @Override

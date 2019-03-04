@@ -4,9 +4,15 @@
   "mixins": [
     "MixinClippingHelper",
     "MixinEntityRenderer",
+    "MixinFontRenderer",
+    "MixinGlStateManager",
     "MixinGuiIngame",
+    "MixinGuiMainMenu",
     "MixinGuiScreen",
-    "MixinMinecraft"
+    "MixinGuiSlot",
+    "MixinMinecraft",
+    "MixinModelRenderer",
+    "MixinRenderGlobal"
   ],
   "server": [],
   "client": [],

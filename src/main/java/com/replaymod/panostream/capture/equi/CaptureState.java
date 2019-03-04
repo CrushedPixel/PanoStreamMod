@@ -11,6 +11,10 @@ public class CaptureState {
 
     @Setter
     @Getter
+    private static boolean geometryShader = false;
+
+    @Setter
+    @Getter
     public static EquirectangularFrameCapturer.Orientation orientation = null;
 
     @Setter
