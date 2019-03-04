@@ -113,7 +113,7 @@ public class Program {
         }
         ARBShaderObjects.glUseProgramObjectARB(0);
         CaptureState.setGeometryShader(false);
-        boundProgram.set(this);
+        boundProgram.set(null);
     }
 
     public void delete() {
