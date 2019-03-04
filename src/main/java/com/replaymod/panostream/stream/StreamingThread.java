@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.replaymod.panostream.PanoStreamMod;
 import com.replaymod.panostream.capture.FrameCapturer;
 import com.replaymod.panostream.capture.equi.EquirectangularFrameCapturer;
+import com.replaymod.panostream.utils.ByteBufferPool;
 import com.replaymod.panostream.utils.FrameSizeUtil;
 import com.replaymod.panostream.utils.StreamPipe;
 import lombok.Getter;
@@ -110,7 +111,7 @@ public class StreamingThread {
 
         //if the frameQueue is too full, we remove one element before adding our new element
         if (frameQueue.size() > MAX_FRAME_BUFFER) {
-            frameQueue.poll();
+            ByteBufferPool.release(frameQueue.poll());
         }
 
         frameQueue.offer(buf);
@@ -154,7 +155,9 @@ public class StreamingThread {
                     return true;
                 }
 
-                channel.write(frameQueue.poll());
+                ByteBuffer buffer = frameQueue.poll();
+                channel.write(buffer);
+                ByteBufferPool.release(buffer);
 
                 // if two frames have been successfully written,
                 // the pipe hasn't been closed after writing the first frame
