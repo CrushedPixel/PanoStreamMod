@@ -12,7 +12,8 @@
     "MixinGuiSlot",
     "MixinMinecraft",
     "MixinModelRenderer",
-    "MixinRenderGlobal"
+    "MixinRenderGlobal",
+    "MixinVboRenderList"
   ],
   "server": [],
   "client": [],

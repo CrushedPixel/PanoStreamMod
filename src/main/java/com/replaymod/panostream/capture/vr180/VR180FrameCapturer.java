@@ -7,6 +7,7 @@ import com.replaymod.panostream.capture.Program;
 import com.replaymod.panostream.capture.equi.CaptureState;
 import com.replaymod.panostream.capture.equi.EquirectangularFrameCapturer;
 import com.replaymod.panostream.stream.VideoStreamer;
+import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
@@ -14,7 +15,6 @@ import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.util.ReportedException;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.client.ForgeHooksClient;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
@@ -35,24 +35,36 @@ public class VR180FrameCapturer extends FrameCapturer {
 
     private final Minecraft mc = Minecraft.getMinecraft();
 
+    @Getter
+    private static VR180FrameCapturer active;
+
     protected final VR180Frame vr180Frame;
 
-    private final Program shaderProgram;
+    /**
+     * Shader which performs tessellation depending on apparent size of rendered quads using a GL32 geometry shader.
+     */
+    private Program geomTessProgram;
+    /**
+     * Basic VR180 shader with no tessellation at all.
+     */
+    private Program simpleProgram;
 
+    private Program boundProgram;
+    private boolean overlay;
+    private boolean leftEye;
     private BooleanState[] previousStates = new BooleanState[3];
     private BooleanState previousFogState;
-
-    private final Program.Uniform thetaFactor, phiFactor, zedFactor;
 
     public VR180FrameCapturer(int frameSize, int fps, VideoStreamer videoStreamer) {
         super(fps, videoStreamer);
         vr180Frame = new VR180Frame(frameSize);
 
+        loadPrograms();
+    }
+
+    private void loadPrograms() {
         // initialize VR180 shader
         try {
-            shaderProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER);
-            shaderProgram.use();
-
             double localFov = Math.PI / 8; /*(90 / 2) * Math.PI / 180*/;
             double aspect = 0.5;
 
@@ -65,55 +77,108 @@ public class VR180FrameCapturer extends FrameCapturer {
             double phi = tanLocalFov / meshFov;
             double zed = aspect * tanRemoteFov;
 
-            thetaFactor = shaderProgram.getUniformVariable("thetaFactor");
-            thetaFactor.set((float) theta);
+            geomTessProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
+                    "#define GS 1\n");
+            geomTessProgram.use();
+            geomTessProgram.getUniformVariable("thetaFactor").set((float) theta);
+            geomTessProgram.getUniformVariable("phiFactor").set((float) phi);
+            geomTessProgram.getUniformVariable("zedFactor").set((float) zed);
+            geomTessProgram.getUniformVariable("texture").set(0);
+            geomTessProgram.getUniformVariable("lightMap").set(1);
+            geomTessProgram.stopUsing();
 
-            phiFactor = shaderProgram.getUniformVariable("phiFactor");
-            phiFactor.set((float) phi);
-
-            zedFactor = shaderProgram.getUniformVariable("zedFactor");
-            zedFactor.set((float) zed);
-
-            System.out.println(theta);
-            System.out.println(phi);
-            System.out.println(zed);
-
-            /*
-            auto fov = XM_PIDIV4;
-            auto aspect = (width / 2.f) / (FLOAT)height;
-            auto near_clip = 0.1f;
-            auto far_clip = 100.f;
-            g_Projection = XMMatrixPerspectiveFovLH( fov, aspect, near_clip, far_clip );
-
-            auto mesh_fov = 70.f * XM_PI / 180.f;
-            auto tan_local_fov = tanf(fov / 2.f);
-            auto remote_fov = 50.f * XM_PI / 180.f;
-            auto tan_remote_fov = tanf(remote_fov);
-
-            CBChangeOnResize cbChangesOnResize;
-            cbChangesOnResize.mProjection = ::XMMatrixTranspose( g_Projection );
-            cbChangesOnResize.mThetaFactor = aspect * tan_local_fov / mesh_fov;
-            cbChangesOnResize.mPhiFactor = tan_local_fov / mesh_fov;
-            cbChangesOnResize.mZedFactor = aspect * tan_remote_fov;
-            g_pImmediateContext->UpdateSubresource( g_pCBChangeOnResize, 0, nullptr, &cbChangesOnResize, 0, 0 );
-            */
-
-            shaderProgram.getUniformVariable("texture").set(0);
-            shaderProgram.getUniformVariable("lightMap").set(1);
-
-            shaderProgram.stopUsing();
+            simpleProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER);
+            simpleProgram.use();
+            simpleProgram.getUniformVariable("thetaFactor").set((float) theta);
+            simpleProgram.getUniformVariable("phiFactor").set((float) phi);
+            simpleProgram.getUniformVariable("zedFactor").set((float) zed);
+            simpleProgram.getUniformVariable("texture").set(0);
+            simpleProgram.getUniformVariable("lightMap").set(1);
+            simpleProgram.stopUsing();
 
         } catch (Exception e) {
             throw new ReportedException(CrashReport.makeCrashReport(e, "Creating VR180 shader"));
         }
     }
 
-    private void linkState(int id, String var) {
-        final Program.Uniform uniform = shaderProgram.getUniformVariable(var);
+    @SuppressWarnings("unused") // to be called from debugger
+    private void reloadPrograms() {
+        if (boundProgram != null) throw new IllegalStateException();
+        if (geomTessProgram != null) {
+            geomTessProgram.delete();
+            geomTessProgram = null;
+        }
+        if (simpleProgram != null) {
+            simpleProgram.delete();
+            simpleProgram = null;
+        }
+        loadPrograms();
+    }
+
+    public void enableTessellation() {
+        if (boundProgram != geomTessProgram) {
+            bindProgram(geomTessProgram);
+        }
+    }
+
+    public void disableTessellation() {
+        if (boundProgram != simpleProgram) {
+            bindProgram(simpleProgram);
+        }
+    }
+
+    private void bindProgram(Program program) {
+        // Note: must not short circuit in case boundProgram == program (or if it does, it must update all uniforms)
+        if (boundProgram != null) {
+            // unhook BooleanStates
+            for (int i = 0; i < previousStates.length; i++) {
+                previousStates[i].currentState = GlStateManager.textureState[i].texture2DState.currentState;
+                GlStateManager.textureState[i].texture2DState = previousStates[i];
+            }
+            previousFogState.currentState = GlStateManager.fogState.fog.currentState;
+            GlStateManager.fogState.fog = previousFogState;
+
+            boundProgram.stopUsing();
+            boundProgram = null;
+        }
+        if (program != null) {
+            program.use();
+
+            program.getUniformVariable("overlay").set(overlay);
+            program.getUniformVariable("leftEye").set(leftEye);
+            program.getUniformVariable("ipd").set(PanoStreamMod.instance.getPanoStreamSettings().ipd.getValue().floatValue());
+
+            // link the GlStateManager's BooleanStates to the fragment shader's uniforms
+            linkState(program, 0, "textureEnabled");
+            linkState(program, 1, "lightMapEnabled");
+            linkState(program, 2, "hurtTextureEnabled");
+
+            // link the fog state
+            final Program.Uniform fogUniform = program.getUniformVariable("fogEnabled");
+            previousFogState = GlStateManager.fogState.fog;
+            fogUniform.set(previousFogState.currentState);
+            GlStateManager.fogState.fog = new GlStateManager.BooleanState(previousFogState.capability) {
+                { currentState = previousFogState.currentState; }
+
+                @Override
+                public void setState(boolean state) {
+                    super.setState(state);
+                    fogUniform.set(state);
+                }
+            };
+
+            boundProgram = program;
+        }
+    }
+
+    private void linkState(Program program, int id, String var) {
+        final Program.Uniform uniform = program.getUniformVariable(var);
         previousStates[id] = GlStateManager.textureState[id].texture2DState;
         uniform.set(previousStates[id].currentState);
 
         GlStateManager.textureState[id].texture2DState = new BooleanState(previousStates[id].capability) {
+            { currentState =  previousStates[id].currentState; }
+
             @Override
             public void setState(boolean state) {
                 super.setState(state);
@@ -130,6 +195,7 @@ public class VR180FrameCapturer extends FrameCapturer {
     protected ByteBuffer doCapture(boolean flip) {
         if (vr180Frame == null) return null;
 
+        active = this;
         CaptureState.setCapturing(true);
         CaptureState.setOrientation(EquirectangularFrameCapturer.Orientation.FRONT);
 
@@ -142,55 +208,27 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         mc.displayWidth = mc.displayHeight = vr180Frame.getFrameSize();
 
-        // use the VR180 shader
-        shaderProgram.use();
-
-        shaderProgram.getUniformVariable("ipd").set(PanoStreamMod.instance.getPanoStreamSettings().ipd.getValue().floatValue());
-
-        // link the GlStateManager's BooleanStates to the fragment shader's uniforms
-        linkState(0, "textureEnabled");
-        linkState(1, "lightMapEnabled");
-        linkState(2, "hurtTextureEnabled");
-
-        // link the fog state
-        final Program.Uniform fogUniform = shaderProgram.getUniformVariable("fogEnabled");
-        previousFogState = GlStateManager.fogState.fog;
-        fogUniform.set(previousFogState.currentState);
-        GlStateManager.fogState.fog = new GlStateManager.BooleanState(previousFogState.capability) {
-            @Override
-            public void setState(boolean state) {
-                super.setState(state);
-                fogUniform.set(state);
-            }
-        };
-
         // render left eye
-        final Program.Uniform leftEyeUniform = shaderProgram.getUniformVariable("leftEye");
-        leftEyeUniform.set(true);
+        leftEye = true;
         vr180Frame.bindFramebuffer(true);
         renderWorld();
         renderOverlays(true, mouseX, mouseY);
         ComposedFrame.unbindFramebuffer();
 
         // render right eye
-        leftEyeUniform.set(false);
+        leftEye = false;
         vr180Frame.bindFramebuffer(false);
         renderWorld();
         renderOverlays(false, mouseX, mouseY);
         ComposedFrame.unbindFramebuffer();
 
-        // unhook BooleanStates
-        for (int i = 0; i < previousStates.length; i++) {
-            GlStateManager.textureState[i].texture2DState = previousStates[i];
-        }
-        GlStateManager.fogState.fog = previousFogState;
-
-        shaderProgram.stopUsing();
+        bindProgram(null);
 
         // restore mc size
         mc.displayWidth = widthBefore;
         mc.displayHeight = heightBefore;
 
+        active = null;
         CaptureState.setCapturing(false);
 
         vr180Frame.composeTopBottom(flip);
@@ -210,7 +248,8 @@ public class VR180FrameCapturer extends FrameCapturer {
         GlStateManager.enableAlpha();
         GlStateManager.alphaFunc(516, 0.5F);
 
-        shaderProgram.getUniformVariable("overlay").set(false);
+        overlay = false;
+        bindProgram(geomTessProgram); // explicit re-bind to update uniforms
 
         mc.entityRenderer.renderWorldPass(2, mc.timer.elapsedPartialTicks, 0);
     }
@@ -218,7 +257,8 @@ public class VR180FrameCapturer extends FrameCapturer {
     private void renderOverlays(boolean left, int mouseX, int mouseY) {
         if (this.mc.gameSettings.hideGUI && this.mc.currentScreen == null) return;
 
-        shaderProgram.getUniformVariable("overlay").set(true);
+        overlay = true;
+        bindProgram(geomTessProgram); // explicit re-bind to update uniforms
 
         GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
 
@@ -247,7 +287,8 @@ public class VR180FrameCapturer extends FrameCapturer {
 
     @Override
     public void destroy() {
-        shaderProgram.delete();
+        geomTessProgram.delete();
+        simpleProgram.delete();
         vr180Frame.destroy();
     }
 

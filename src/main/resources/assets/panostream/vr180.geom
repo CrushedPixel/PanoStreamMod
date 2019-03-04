@@ -43,9 +43,7 @@ Vert in_vert(int idx) {
     );
 }
 
-Vert transformVertex(Vert vert) {
-    vec4 pos = vert.pos;
-
+vec4 transformPos(vec4 pos) {
     // Flip space to make forward be towards positive z
     pos.z *= -1.0;
 
@@ -64,8 +62,13 @@ Vert transformVertex(Vert vert) {
     pos.z *= -1.0;
 
     // Transform to screen space
-    vert.pos = projectionMatrix[0] * pos;
+    pos = projectionMatrix[0] * pos;
 
+    return pos;
+}
+
+Vert transformVertex(Vert vert) {
+    vert.pos = transformPos(vert.pos);
     return vert;
 }
 

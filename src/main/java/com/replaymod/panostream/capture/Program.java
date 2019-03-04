@@ -7,16 +7,19 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.resources.IResource;
 import net.minecraft.util.ResourceLocation;
 import org.apache.commons.io.IOUtils;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.ARBFragmentShader;
 import org.lwjgl.opengl.ARBShaderObjects;
 import org.lwjgl.opengl.ARBVertexShader;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.opengl.Util;
 
 import java.io.InputStream;
-import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import static org.lwjgl.opengl.ARBShaderObjects.*;
 
@@ -30,20 +33,20 @@ public class Program {
     private final boolean hasGeometryShader;
     private final int program;
 
-    public Program(ResourceLocation vertexShader, ResourceLocation fragmentShader) throws Exception {
-        this(vertexShader, null, fragmentShader);
+    public Program(ResourceLocation vertexShader, ResourceLocation fragmentShader, String...defines) throws Exception {
+        this(vertexShader, null, fragmentShader, defines);
     }
 
-    public Program(ResourceLocation vertexShader, ResourceLocation geometryShader, ResourceLocation fragmentShader) throws Exception {
-        int vertShader = createShader(vertexShader, ARBVertexShader.GL_VERTEX_SHADER_ARB);
+    public Program(ResourceLocation vertexShader, ResourceLocation geometryShader, ResourceLocation fragmentShader, String...defines) throws Exception {
+        int vertShader = createShader(vertexShader, defines, ARBVertexShader.GL_VERTEX_SHADER_ARB);
         int geomShader = 0;
         if (geometryShader != null) {
             hasGeometryShader = true;
-            geomShader = createShader(geometryShader, GL32.GL_GEOMETRY_SHADER);
+            geomShader = createShader(geometryShader, defines, GL32.GL_GEOMETRY_SHADER);
         } else {
             hasGeometryShader = false;
         }
-        int fragShader = createShader(fragmentShader, ARBFragmentShader.GL_FRAGMENT_SHADER_ARB);
+        int fragShader = createShader(fragmentShader, defines, ARBFragmentShader.GL_FRAGMENT_SHADER_ARB);
 
         program = glCreateProgramObjectARB();
         if (program == 0) {
@@ -67,7 +70,7 @@ public class Program {
         }
     }
 
-    private int createShader(ResourceLocation resourceLocation, int shaderType) throws Exception {
+    private int createShader(ResourceLocation resourceLocation, String[] defines, int shaderType) throws Exception {
         int shader = 0;
         try {
             shader = OpenGlHelper.glCreateShader(shaderType);
@@ -79,11 +82,13 @@ public class Program {
 
             IResource resource = Minecraft.getMinecraft().getResourceManager().getResource(resourceLocation);
             try (InputStream is = resource.getInputStream()) {
-                byte[] bytes = IOUtils.toByteArray(is);
-                ByteBuffer byteBuffer = BufferUtils.createByteBuffer(bytes.length);
-                byteBuffer.put(bytes);
-                byteBuffer.position(0);
-                OpenGlHelper.glShaderSource(shader, byteBuffer);
+                List<String> lines = new ArrayList<>(
+                        Arrays.asList(IOUtils.toString(is, StandardCharsets.UTF_8).split("\n")));
+                List<String> result = new ArrayList<>();
+                result.add(lines.remove(0)); // #version directive
+                result.addAll(Arrays.asList(defines));
+                result.addAll(lines);
+                GL20.glShaderSource(shader, String.join("\n", result));
             }
             OpenGlHelper.glCompileShader(shader);
 
