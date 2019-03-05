@@ -1,6 +1,7 @@
 package com.replaymod.panostream.gui;
 
 import com.replaymod.panostream.capture.equi.CaptureState;
+import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import com.replaymod.panostream.utils.GlTimingQueries;
 import de.johni0702.minecraft.gui.GuiRenderer;
 import de.johni0702.minecraft.gui.RenderInfo;
@@ -8,9 +9,11 @@ import de.johni0702.minecraft.gui.container.AbstractGuiOverlay;
 import de.johni0702.minecraft.gui.container.GuiPanel;
 import de.johni0702.minecraft.gui.element.GuiCheckbox;
 import de.johni0702.minecraft.gui.element.GuiLabel;
+import de.johni0702.minecraft.gui.element.GuiNumberField;
 import de.johni0702.minecraft.gui.function.Typeable;
 import de.johni0702.minecraft.gui.layout.CustomLayout;
 import de.johni0702.minecraft.gui.layout.GridLayout;
+import de.johni0702.minecraft.gui.layout.HorizontalLayout;
 import de.johni0702.minecraft.gui.layout.VerticalLayout;
 import de.johni0702.minecraft.gui.utils.Consumer;
 import org.lwjgl.input.Keyboard;
@@ -29,6 +32,8 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     public boolean renderGui = true;
     public boolean compose = true;
     public boolean transfer = true;
+    public boolean useReadPixels = true;
+    public int pbos = 3;
 
     public GlTimingQueries queryWorldLeft = new GlTimingQueries(v -> nanoWorldLeftCpu = v, v -> nanoWorldLeftGpu = v);
     public GlTimingQueries queryWorldRight = new GlTimingQueries(v -> nanoWorldRightCpu = v, v -> nanoWorldRightGpu = v);
@@ -64,6 +69,17 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                     new GuiLabel().setText("Transfer:"), transferTimeCpu, transferTimeGpu
             );
 
+    private GuiNumberField pbosField = new GuiNumberField().setSize(50, 20).setValidateOnFocusChange(true).setValue(pbos);
+    {
+        pbosField.onEnter(() -> {
+            pbos = Math.max(1, pbosField.getInteger());
+            pbosField.setValue(pbos);
+            VR180FrameCapturer capturer = VR180FrameCapturer.getCurrent();
+            if (capturer != null) {
+                capturer.recreateFrame();
+            }
+        });
+    }
     private GuiPanel configPanel = new GuiPanel(this)
         .setLayout(new VerticalLayout())
             .addElements(null,
@@ -74,7 +90,9 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                     new ConfigCheckbox("Render world", renderWorld, v -> renderWorld = v),
                     new ConfigCheckbox("Render gui", renderGui, v -> renderGui = v),
                     new ConfigCheckbox("Compose frames into one", compose, v -> compose = v),
-                    new ConfigCheckbox("Download final frame", transfer, v -> transfer = v)
+                    new ConfigCheckbox("Download final frame", transfer, v -> transfer = v),
+                    new ConfigCheckbox("Use glReadPixels", useReadPixels, v -> useReadPixels = v),
+                    new GuiPanel().addElements(new HorizontalLayout.Data(0.5), pbosField, new GuiLabel().setText(" PBOs"))
             );
 
     {

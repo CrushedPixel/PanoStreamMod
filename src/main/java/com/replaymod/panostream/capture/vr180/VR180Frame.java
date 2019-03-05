@@ -97,7 +97,7 @@ public class VR180Frame extends ComposedFrame {
     public void destroy() {
         super.destroy();
 
-        //shaderProgram.delete();
+        shaderProgram.delete();
 
         leftEye.deleteFramebuffer();
         rightEye.deleteFramebuffer();

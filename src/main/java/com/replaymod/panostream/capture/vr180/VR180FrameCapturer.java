@@ -39,7 +39,12 @@ public class VR180FrameCapturer extends FrameCapturer {
     @Getter
     private static VR180FrameCapturer active;
 
-    protected final VR180Frame vr180Frame;
+    // Current (but not necessarily active) frame capturer
+    @Getter
+    private static VR180FrameCapturer current;
+
+    private int frameSize;
+    protected VR180Frame vr180Frame;
 
     /**
      * Shader which performs tessellation depending on apparent size of rendered quads using a GL32 geometry shader.
@@ -61,9 +66,20 @@ public class VR180FrameCapturer extends FrameCapturer {
 
     public VR180FrameCapturer(int frameSize, int fps, VideoStreamer videoStreamer) {
         super(fps, videoStreamer);
-        vr180Frame = new VR180Frame(frameSize);
+        this.frameSize = frameSize;
 
+        recreateFrame();
         loadPrograms();
+
+        current = this;
+    }
+
+    public void recreateFrame() {
+        if (vr180Frame != null) {
+            vr180Frame.destroy();
+            vr180Frame = null;
+        }
+        vr180Frame = new VR180Frame(frameSize);
     }
 
     private void loadPrograms() {
@@ -341,6 +357,10 @@ public class VR180FrameCapturer extends FrameCapturer {
         geomTessProgram.delete();
         simpleProgram.delete();
         vr180Frame.destroy();
+
+        if (current == this) {
+            current = null;
+        }
     }
 
     @Override

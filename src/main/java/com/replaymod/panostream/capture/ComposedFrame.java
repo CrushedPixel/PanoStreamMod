@@ -6,6 +6,7 @@ import lombok.Getter;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.shader.Framebuffer;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
 
 import java.nio.ByteBuffer;
 
@@ -17,7 +18,8 @@ public abstract class ComposedFrame {
     @Getter
     protected final Framebuffer composedFramebuffer;
 
-    private PixelBufferObject pbo;
+    private PixelBufferObject pbos[];
+    private int ready;
 
     protected ComposedFrame(int width, int height) {
         // initialize the framebuffer
@@ -25,48 +27,70 @@ public abstract class ComposedFrame {
         composedFramebuffer.setFramebufferColor(0.0F, 0.0F, 0.0F, 0.0F);
 
         // initialize the PBO
-        int bufferSize = width * height * 3;
-        pbo = new PixelBufferObject(bufferSize, PixelBufferObject.Usage.READ);
+        int bufferSize = width * height * 4;
+        pbos = new PixelBufferObject[GuiDebug.instance.pbos];
+        for (int i = 0; i < pbos.length; i++) {
+            pbos[i] = new PixelBufferObject(bufferSize, PixelBufferObject.Usage.READ);
+        }
+
+        ready = -pbos.length;
     }
 
     /**
      * Transfers the composed framebuffer to the PBO.
      */
     private void transferToPBO() {
-        pbo.bind();
+        pbos[0].bind();
 
-        GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, 1);
-        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
+        if (GuiDebug.instance.useReadPixels) {
+            composedFramebuffer.bindFramebuffer(true);
+            GL11.glReadBuffer(OpenGlHelper.GL_COLOR_ATTACHMENT0);
+            GL11.glReadPixels(0, 0, composedFramebuffer.framebufferWidth, composedFramebuffer.framebufferHeight, GL12.GL_BGRA, GL11.GL_UNSIGNED_BYTE, 0);
+            composedFramebuffer.unbindFramebuffer();
+        } else {
+            composedFramebuffer.bindFramebufferTexture();
+            GL11.glGetTexImage(GL11.GL_TEXTURE_2D, 0, GL12.GL_BGRA, GL11.GL_UNSIGNED_BYTE, 0);
+            composedFramebuffer.unbindFramebufferTexture();
+        }
 
-        composedFramebuffer.bindFramebufferTexture();
-        GL11.glGetTexImage(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGB, GL11.GL_UNSIGNED_BYTE, 0);
-        composedFramebuffer.unbindFramebufferTexture();
+        pbos[0].unbind();
+    }
 
-        pbo.unbind();
+    private void shiftPBOs() {
+        PixelBufferObject last = pbos[pbos.length - 1];
+        System.arraycopy(pbos, 0, pbos, 1, pbos.length - 1);
+        pbos[0] = last;
     }
 
     /**
      * Reads the current composed framebuffer into a ByteBuffer.
      */
     public ByteBuffer getByteBuffer() {
-        if (!GuiDebug.instance.transfer) return ByteBufferPool.allocate(pbo.getSize());
+        if (!GuiDebug.instance.transfer) return ByteBufferPool.allocate(pbos[0].getSize());
 
         transferToPBO();
+        shiftPBOs();
+
+        ready++;
+        if (ready < 0) {
+            return null;
+        }
 
         // read the PBO's contents into a ByteBuffer
-        pbo.bind();
-        ByteBuffer pboBuffer = pbo.mapReadOnly();
-        ByteBuffer buffer = ByteBufferPool.allocate(pbo.getSize());
+        pbos[0].bind();
+        ByteBuffer pboBuffer = pbos[0].mapReadOnly();
+        ByteBuffer buffer = ByteBufferPool.allocate(pbos[0].getSize());
         buffer.put(pboBuffer);
         buffer.rewind();
-        pbo.unmap();
-        pbo.unbind();
-
+        pbos[0].unmap();
+        pbos[0].unbind();
         return buffer;
     }
 
     public void destroy() {
-        pbo.delete();
+        for (PixelBufferObject pbo : pbos) {
+            pbo.delete();
+        }
         composedFramebuffer.deleteFramebuffer();
     }
 

@@ -17,7 +17,7 @@ public class PanoStreamSettings extends ConfigSettings {
 
     public StringSetting ffmpegCommand = new StringSetting("ffmpeg");
 
-    public StringSetting ffmpegArgs = new StringSetting("-f rawvideo -pix_fmt rgb24 -s %WIDTH%x%HEIGHT% -r %FPS% -i - " +
+    public StringSetting ffmpegArgs = new StringSetting("-f rawvideo -pix_fmt bgra32 -s %WIDTH%x%HEIGHT% -r %FPS% -i - " +
             "-f flv -qmin 2 -qmax 25 -rtmp_buffer 100 -rtmp_live live %DESTINATION%");
 
     public StringSetting rtmpServer = new StringSetting("rtmp://localhost/panostream/live");
