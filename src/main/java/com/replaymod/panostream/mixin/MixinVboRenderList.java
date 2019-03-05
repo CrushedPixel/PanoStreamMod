@@ -54,6 +54,8 @@ public abstract class MixinVboRenderList extends ChunkRenderContainer {
 
         vertexBuffer.drawArrays(mode);
 
+        capturer.enableTessellation();
+
         renderChunk = null;
     }
 }

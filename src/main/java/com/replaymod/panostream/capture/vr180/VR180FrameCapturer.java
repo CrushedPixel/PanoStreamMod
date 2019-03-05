@@ -49,6 +49,9 @@ public class VR180FrameCapturer extends FrameCapturer {
      */
     private Program simpleProgram;
 
+    private boolean lazyEnableTessellation;
+    private boolean lazyDisableTessellation;
+
     private Program boundProgram;
     private boolean overlay;
     private boolean leftEye;
@@ -116,13 +119,20 @@ public class VR180FrameCapturer extends FrameCapturer {
     }
 
     public void enableTessellation() {
-        if (boundProgram != geomTessProgram) {
-            bindProgram(geomTessProgram);
-        }
+        lazyEnableTessellation = true;
+        lazyDisableTessellation = false;
     }
 
     public void disableTessellation() {
-        if (boundProgram != simpleProgram) {
+        lazyEnableTessellation = false;
+        lazyDisableTessellation = true;
+    }
+
+    public void forceLazyRenderState() {
+        if (lazyEnableTessellation && boundProgram != geomTessProgram) {
+            bindProgram(geomTessProgram);
+        }
+        if (lazyDisableTessellation && boundProgram != simpleProgram) {
             bindProgram(simpleProgram);
         }
     }
@@ -250,6 +260,7 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         overlay = false;
         bindProgram(geomTessProgram); // explicit re-bind to update uniforms
+        enableTessellation();
 
         mc.entityRenderer.renderWorldPass(2, mc.timer.elapsedPartialTicks, 0);
     }
@@ -259,6 +270,7 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         overlay = true;
         bindProgram(geomTessProgram); // explicit re-bind to update uniforms
+        enableTessellation();
 
         GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
 

@@ -1,6 +1,7 @@
 package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.capture.equi.CaptureState;
+import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import net.minecraft.client.gui.GuiSlot;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.Tessellator;
@@ -14,6 +15,10 @@ public abstract class MixinGuiSlot {
     // Decreases zLevel during drawing of the container background to fix incorrect z layering
     @Inject(method = "drawContainerBackground", at = @At("HEAD"), remap = false, cancellable = true)
     private void bindVR180Shader(Tessellator tessellator, CallbackInfo ci) {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        if (capturer != null) {
+            capturer.forceLazyRenderState();
+        }
         if (CaptureState.isGeometryShader()) {
             GlStateManager.translate(0f, 0f, -500f);
         }
@@ -21,6 +26,10 @@ public abstract class MixinGuiSlot {
 
     @Inject(method = "drawContainerBackground", at = @At("RETURN"), remap = false)
     private void resetZLevel(Tessellator tessellator, CallbackInfo ci) {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        if (capturer != null) {
+            capturer.forceLazyRenderState();
+        }
         if (CaptureState.isGeometryShader()) {
             GlStateManager.translate(0f, 0f, 500f);
         }

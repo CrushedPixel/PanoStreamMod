@@ -7,29 +7,21 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.BlockRenderLayer;
 import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(RenderGlobal.class)
 public abstract class MixinRenderGlobal {
-    // Re-enable tessellation if disabled by one if the chunks
-    @Inject(method = "renderBlockLayer(Lnet/minecraft/util/BlockRenderLayer;DILnet/minecraft/entity/Entity;)I", at = @At("HEAD"))
-    private void enableTessellation(BlockRenderLayer blockLayerIn, double partialTicks, int pass, Entity entityIn, CallbackInfoReturnable<Integer> cir) {
-        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
-        if (capturer != null) {
-            capturer.enableTessellation();
-        }
-    }
-
     // Our geometry shader only supports GL_QUADS, not GL_LINE_STRIP. See MixinGlStateManager.
     @Inject(method = "drawBoundingBox(DDDDDDFFFF)V", at = @At("HEAD"), cancellable = true)
     private static void drawBoundingBoxAsQuads(double minX, double minY, double minZ, double maxX, double maxY, double maxZ, float red, float green, float blue, float alpha, CallbackInfo ci) {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        if (capturer != null) {
+            capturer.forceLazyRenderState();
+        }
         if (!CaptureState.isGeometryShader()) {
             return;
         }

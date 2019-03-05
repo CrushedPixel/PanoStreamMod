@@ -1,6 +1,7 @@
 package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.capture.equi.CaptureState;
+import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
@@ -29,6 +30,10 @@ public abstract class MixinGuiScreen extends Gui {
     // Decreases zLevel during drawing of the container background to fix incorrect z layering
     @Inject(method = "drawBackground", at = @At("HEAD"))
     private void setZLevel(int tint, CallbackInfo ci) {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        if (capturer != null) {
+            capturer.forceLazyRenderState();
+        }
         if (CaptureState.isGeometryShader()) {
             GlStateManager.translate(0f, 0f, -10000f);
         }
@@ -36,6 +41,10 @@ public abstract class MixinGuiScreen extends Gui {
 
     @Inject(method = "drawBackground", at = @At("RETURN"))
     private void resetZLevel(int tint, CallbackInfo ci) {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        if (capturer != null) {
+            capturer.forceLazyRenderState();
+        }
         if (CaptureState.isGeometryShader()) {
             GlStateManager.translate(0f, 0f, 10000f);
         }

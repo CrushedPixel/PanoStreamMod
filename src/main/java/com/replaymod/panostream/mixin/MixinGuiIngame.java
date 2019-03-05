@@ -2,6 +2,7 @@ package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.capture.Program;
 import com.replaymod.panostream.capture.equi.CaptureState;
+import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiIngame;
@@ -25,6 +26,10 @@ public class MixinGuiIngame extends Gui {
 
     @Redirect(method = "renderAttackIndicator", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiIngame;drawTexturedModalRect(IIIIII)V", ordinal = 0))
     private void renderCrossHairWithDepth(GuiIngame guiIngame, int x, int y, int textureX, int textureY, int width, int height) {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        if (capturer != null) {
+            capturer.forceLazyRenderState();
+        }
         if (!CaptureState.isCapturing() || !CaptureState.isGeometryShader()) {
             guiIngame.drawTexturedModalRect(x, y, textureX, textureY, width, height);
         } else {
