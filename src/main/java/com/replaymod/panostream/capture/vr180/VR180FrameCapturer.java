@@ -181,6 +181,7 @@ public class VR180FrameCapturer extends FrameCapturer {
             boundProgram = null;
         }
         if (program != null) {
+            GuiDebug.instance.programSwitchesCounter++;
             program.use();
 
             program.getUniformVariable("overlay").set(overlay);
@@ -237,6 +238,7 @@ public class VR180FrameCapturer extends FrameCapturer {
         active = this;
         CaptureState.setCapturing(true);
         CaptureState.setOrientation(EquirectangularFrameCapturer.Orientation.FRONT);
+        GuiDebug.instance.programSwitchesCounter = 0;
 
         int widthBefore = mc.displayWidth;
         int heightBefore = mc.displayHeight;

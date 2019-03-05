@@ -49,6 +49,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     private int nanoGuiRightCpu, nanoGuiRightGpu;
     private int nanoComposeCpu, nanoComposeGpu;
     private int nanoTransferCpu, nanoTransferGpu;
+    public int programSwitchesCounter;
 
     private GuiLabel renderTimeWorldCpu = new GuiLabel(), renderTimeWorldGpu = new GuiLabel();
     private GuiLabel renderTimeGuiCpu = new GuiLabel(), renderTimeGuiGpu = new GuiLabel();
@@ -57,6 +58,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     private GuiLabel renderTimeBothCpu = new GuiLabel(), renderTimeBothGpu = new GuiLabel();
     private GuiLabel composeTimeCpu = new GuiLabel(), composeTimeGpu = new GuiLabel();
     private GuiLabel transferTimeCpu = new GuiLabel(), transferTimeGpu = new GuiLabel();
+    private GuiLabel programSwitches = new GuiLabel();
     private GuiPanel timingPanel = new GuiPanel(this)
             .setLayout(new GridLayout().setCellsEqualSize(true).setColumns(3).setSpacingX(5))
             .addElements(new GridLayout.Data(1, 0),
@@ -67,7 +69,8 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                     new GuiLabel().setText("Render right:"), renderTimeRightCpu, renderTimeRightGpu,
                     new GuiLabel().setText("Render both:"), renderTimeBothCpu, renderTimeBothGpu,
                     new GuiLabel().setText("Compose:"), composeTimeCpu, composeTimeGpu,
-                    new GuiLabel().setText("Transfer:"), transferTimeCpu, transferTimeGpu
+                    new GuiLabel().setText("Transfer:"), transferTimeCpu, transferTimeGpu,
+                    new GuiLabel().setText("Program switches:"), programSwitches, new GuiLabel()
             );
 
     private GuiNumberField pbosField = new GuiNumberField().setSize(50, 20).setValidateOnFocusChange(true).setValue(pbos);
@@ -132,6 +135,8 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
         renderTimeBothGpu.setText(String.format("%,d", nanoWorldLeftGpu + nanoGuiLeftGpu + nanoWorldRightGpu + nanoGuiRightGpu));
         composeTimeGpu.setText(String.format("%,d", nanoComposeGpu));
         transferTimeGpu.setText(String.format("%,d", nanoTransferGpu));
+
+        programSwitches.setText(String.format("%,d", programSwitchesCounter));
         super.draw(renderer, size, renderInfo);
     }
 
