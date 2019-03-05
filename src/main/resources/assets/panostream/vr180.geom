@@ -79,17 +79,16 @@ void emitVertex(Vert vert) {
     EmitVertex();
 }
 
-void subdivide(Vert v0, Vert v1, Vert v2, Vert v3) {
-    const int N = 10;
-    for (int x = 0; x < N; x++) {
-        Vert lt = mixVert(v0, v3, x, N);
-        Vert lb = mixVert(v0, v3, x+1, N);
-        Vert rt = mixVert(v1, v2, x, N);
-        Vert rb = mixVert(v1, v2, x+1, N);
+void subdivide(Vert v0, Vert v1, Vert v2, Vert v3, int tx, int ty) {
+    for (int x = 0; x < tx; x++) {
+        Vert lt = mixVert(v0, v3, x, tx);
+        Vert lb = mixVert(v0, v3, x+1, tx);
+        Vert rt = mixVert(v1, v2, x, tx);
+        Vert rb = mixVert(v1, v2, x+1, tx);
         emitVertex(transformVertex(lb));
-        for (int y = 0; y < N; y++) {
-            emitVertex(transformVertex(mixVert(lt, rt, y, N)));
-            emitVertex(transformVertex(mixVert(lb, rb, y+1, N)));
+        for (int y = 0; y < ty; y++) {
+            emitVertex(transformVertex(mixVert(lt, rt, y, ty)));
+            emitVertex(transformVertex(mixVert(lb, rb, y+1, ty)));
         }
         emitVertex(transformVertex(rt));
         EndPrimitive();
@@ -104,7 +103,21 @@ void main() {
 
     #ifdef OVERLAY
 
-    subdivide(v0, v1, v2, v3);
+    // When rendering the overlay, 99% of inputs are flat rectangles, so it makes lots of sense to
+    // tessellate different amounts in different directions.
+    // The background quad of a GuiScreen will have lengths 1 (full virtual screen) can be be subdivided into
+    // at most 10x10 smaller quads.
+    int tx = clamp(int(length(v0.pos - v3.pos) * 10.0), 1, 10);
+    int ty = clamp(int(length(v0.pos - v1.pos) * 10.0), 1, 10);
+    if (tx > 1 || ty > 1) {
+        subdivide(v0, v1, v2, v3, tx, ty);
+    } else {
+        emitVertex(transformVertex(v3));
+        emitVertex(transformVertex(v0));
+        emitVertex(transformVertex(v2));
+        emitVertex(transformVertex(v1));
+        EndPrimitive();
+    }
 
     #else
 
@@ -131,7 +144,8 @@ void main() {
     float d3 = dot(v3.pos, v3.pos) / maxSideLen;
     float d = min(min(d0, d1), min(d2, d3));
     if (d < 25) {
-        subdivide(v0, v1, v2, v3);
+        const int N = 10;
+        subdivide(v0, v1, v2, v3, N, N);
     }
     if (d > 9) {
         emitVertex(transformVertex(v3));
