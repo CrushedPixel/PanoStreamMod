@@ -118,6 +118,18 @@ public class VR180FrameCapturer extends FrameCapturer {
         loadPrograms();
     }
 
+    public boolean isTessellationActive() {
+        return lazyEnableTessellation || (!lazyDisableTessellation && boundProgram == geomTessProgram);
+    }
+
+    public void setTessellationActive(boolean active) {
+        if (active) {
+            enableTessellation();
+        } else {
+            disableTessellation();
+        }
+    }
+
     public void enableTessellation() {
         lazyEnableTessellation = true;
         lazyDisableTessellation = false;

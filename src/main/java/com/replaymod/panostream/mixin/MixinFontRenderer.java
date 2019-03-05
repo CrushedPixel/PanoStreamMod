@@ -1,5 +1,6 @@
 package com.replaymod.panostream.mixin;
 
+import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.Tessellator;
@@ -46,6 +47,13 @@ public abstract class MixinFontRenderer {
         int l = this.charWidth[ch];
         float f = (float)l - 0.01F;
 
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        boolean wasTessellating = false;
+        if (capturer != null) {
+            wasTessellating = capturer.isTessellationActive();
+            capturer.disableTessellation();
+        }
+
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder bb = tessellator.getBuffer();
         bb.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
@@ -62,6 +70,8 @@ public abstract class MixinFontRenderer {
         bb.tex((float)i / 128.0F, ((float)j + 7.99F) / 128.0F);
         bb.endVertex();
         tessellator.draw();
+
+        if (capturer != null) capturer.setTessellationActive(wasTessellating);
 
         return (float)l;
     }
@@ -92,6 +102,13 @@ public abstract class MixinFontRenderer {
             float f4 = f1 - f - 0.02F;
             float f5 = italic ? 1.0F : 0.0F;
 
+            VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+            boolean wasTessellating = false;
+            if (capturer != null) {
+                wasTessellating = capturer.isTessellationActive();
+                capturer.disableTessellation();
+            }
+
             Tessellator tessellator = Tessellator.getInstance();
             BufferBuilder bb = tessellator.getBuffer();
             bb.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX);
@@ -108,6 +125,8 @@ public abstract class MixinFontRenderer {
             bb.tex((f2 + f4) / 256.0F, f3 / 256.0F);
             bb.endVertex();
             tessellator.draw();
+
+            if (capturer != null) capturer.setTessellationActive(wasTessellating);
 
             return (f1 - f) / 2.0F + 1.0F;
         }
