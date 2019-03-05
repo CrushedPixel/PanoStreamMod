@@ -15,7 +15,6 @@ out vec2 lightMapCoord;
 uniform float thetaFactor;
 uniform float phiFactor;
 uniform float zedFactor;
-uniform bool overlay;
 
 struct Vert {
     vec4 pos;
@@ -103,10 +102,11 @@ void main() {
     Vert v2 = in_vert(2);
     Vert v3 = in_vert(3);
 
-    if (overlay) {
-        subdivide(v0, v1, v2, v3);
-        return;
-    }
+    #ifdef OVERLAY
+
+    subdivide(v0, v1, v2, v3);
+
+    #else
 
     // Clip any objects behind the player
     if (v0.pos.z > 0 && v1.pos.z > 0 && v2.pos.z > 0 && v3.pos.z > 0) {
@@ -140,4 +140,6 @@ void main() {
         emitVertex(transformVertex(v1));
         EndPrimitive();
     }
+
+    #endif
 }

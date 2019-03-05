@@ -21,6 +21,8 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import static net.minecraft.client.renderer.GlStateManager.BooleanState;
 import static net.minecraft.client.renderer.GlStateManager.enableDepth;
@@ -46,19 +48,20 @@ public class VR180FrameCapturer extends FrameCapturer {
     private int frameSize;
     protected VR180Frame vr180Frame;
 
+    private List<Program> programs = new ArrayList<>();
     /**
      * Shader which performs tessellation depending on apparent size of rendered quads using a GL32 geometry shader.
      */
     private Program geomTessProgram;
+    private Program geomTessOverlayProgram; // GUI variant
     /**
      * Basic VR180 shader with no tessellation at all.
      */
     private Program simpleProgram;
-
-    private boolean lazyEnableTessellation;
-    private boolean lazyDisableTessellation;
+    private Program simpleOverlayProgram; // GUI variant
 
     private Program boundProgram;
+    private boolean tessellation;
     private boolean overlay;
     private boolean leftEye;
     private BooleanState[] previousStates = new BooleanState[3];
@@ -97,24 +100,23 @@ public class VR180FrameCapturer extends FrameCapturer {
             double phi = tanLocalFov / meshFov;
             double zed = aspect * tanRemoteFov;
 
-            geomTessProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
-                    "#define GS 1\n");
-            geomTessProgram.use();
-            geomTessProgram.getUniformVariable("thetaFactor").set((float) theta);
-            geomTessProgram.getUniformVariable("phiFactor").set((float) phi);
-            geomTessProgram.getUniformVariable("zedFactor").set((float) zed);
-            geomTessProgram.getUniformVariable("texture").set(0);
-            geomTessProgram.getUniformVariable("lightMap").set(1);
-            geomTessProgram.stopUsing();
+            programs.add(geomTessProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
+                    "#define GS 1\n"));
+            programs.add(geomTessOverlayProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
+                    "#define GS 1\n#define OVERLAY 1\n"));
+            programs.add(simpleProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER));
+            programs.add(simpleOverlayProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
+                    "#define OVERLAY 1\n"));
 
-            simpleProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER);
-            simpleProgram.use();
-            simpleProgram.getUniformVariable("thetaFactor").set((float) theta);
-            simpleProgram.getUniformVariable("phiFactor").set((float) phi);
-            simpleProgram.getUniformVariable("zedFactor").set((float) zed);
-            simpleProgram.getUniformVariable("texture").set(0);
-            simpleProgram.getUniformVariable("lightMap").set(1);
-            simpleProgram.stopUsing();
+            for (Program program : programs) {
+                program.use();
+                program.getUniformVariable("thetaFactor").set((float) theta);
+                program.getUniformVariable("phiFactor").set((float) phi);
+                program.getUniformVariable("zedFactor").set((float) zed);
+                program.getUniformVariable("texture").set(0);
+                program.getUniformVariable("lightMap").set(1);
+                program.stopUsing();
+            }
 
         } catch (Exception e) {
             throw new ReportedException(CrashReport.makeCrashReport(e, "Creating VR180 shader"));
@@ -124,44 +126,44 @@ public class VR180FrameCapturer extends FrameCapturer {
     @SuppressWarnings("unused") // to be called from debugger
     private void reloadPrograms() {
         if (boundProgram != null) throw new IllegalStateException();
-        if (geomTessProgram != null) {
-            geomTessProgram.delete();
-            geomTessProgram = null;
+        for (Program program : programs) {
+            program.delete();
         }
-        if (simpleProgram != null) {
-            simpleProgram.delete();
-            simpleProgram = null;
-        }
+        programs.clear();
         loadPrograms();
     }
 
+    private Program getTessellationProgram() {
+        return overlay ? geomTessOverlayProgram : geomTessProgram;
+    }
+
+    private Program getSimpleProgram() {
+        return overlay ? simpleOverlayProgram : simpleProgram;
+    }
+
     public boolean isTessellationActive() {
-        return lazyEnableTessellation || (!lazyDisableTessellation && boundProgram == geomTessProgram);
+        return tessellation;
     }
 
     public void setTessellationActive(boolean active) {
-        if (active) {
-            enableTessellation();
-        } else {
-            disableTessellation();
-        }
+        tessellation = active;
     }
 
     public void enableTessellation() {
-        lazyEnableTessellation = true;
-        lazyDisableTessellation = false;
+        setTessellationActive(true);
     }
 
     public void disableTessellation() {
-        lazyEnableTessellation = false;
-        lazyDisableTessellation = true;
+        setTessellationActive(false);
     }
 
     public void forceLazyRenderState() {
-        if (lazyEnableTessellation && boundProgram != geomTessProgram) {
-            bindProgram(geomTessProgram);
+        Program tessellationProgram = getTessellationProgram();
+        if (tessellation && boundProgram != tessellationProgram) {
+            bindProgram(tessellationProgram);
         }
-        if (lazyDisableTessellation && boundProgram != simpleProgram) {
+        Program simpleProgram = getSimpleProgram();
+        if (!tessellation && boundProgram != simpleProgram) {
             bindProgram(simpleProgram);
         }
     }
@@ -184,7 +186,6 @@ public class VR180FrameCapturer extends FrameCapturer {
             GuiDebug.instance.programSwitchesCounter++;
             program.use();
 
-            program.getUniformVariable("overlay").set(overlay);
             program.getUniformVariable("leftEye").set(leftEye);
             program.getUniformVariable("ipd").set(PanoStreamMod.instance.getPanoStreamSettings().ipd.getValue().floatValue());
 
@@ -311,7 +312,6 @@ public class VR180FrameCapturer extends FrameCapturer {
         GlStateManager.alphaFunc(516, 0.5F);
 
         overlay = false;
-        bindProgram(geomTessProgram); // explicit re-bind to update uniforms
         enableTessellation();
 
         mc.entityRenderer.renderWorldPass(2, mc.timer.elapsedPartialTicks, 0);
@@ -322,10 +322,8 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         overlay = true;
         if (GuiDebug.instance.tessellateGui) {
-            bindProgram(geomTessProgram); // explicit re-bind to update uniforms
             enableTessellation();
         } else {
-            bindProgram(simpleProgram); // explicit re-bind to update uniforms
             disableTessellation();
         }
 

@@ -9,16 +9,28 @@ flat out mat4 projectionMatrix;
 out vec4 vertColor;
 out vec2 textureCoord;
 out vec2 lightMapCoord;
-mat4 projectionMatrix;
 #endif
 
 uniform bool leftEye;
-uniform bool overlay;
 uniform float ipd;
 uniform float thetaFactor;
 uniform float phiFactor;
 uniform float zedFactor;
 
+#ifdef OVERLAY
+const float n = 0.01; // near
+const float f = 2.0; // far
+const float l = n; // left; take up 90 degree of FOV
+const float t = l; // top; in either direction
+const mat4 overlayProjectionMatrix = mat4(
+    vec4(n/l, 0.0, 0.0, 0.0),
+    vec4(0.0, n/t, 0.0, 0.0),
+    vec4(0.0, 0.0, -(f+n)/(f-n), -1.0),
+    vec4(0.0, 0.0, -2.0*f*n/(f-n), 0.0)
+);
+#endif
+
+#ifndef GS
 vec4 transformPos(vec4 pos) {
     // Flip space to make forward be towards positive z
     pos.z *= -1.0;
@@ -42,34 +54,30 @@ vec4 transformPos(vec4 pos) {
     pos.z *= -1.0;
 
     // Transform to screen space
-    pos = projectionMatrix * pos;
+    #ifdef OVERLAY
+    pos = overlayProjectionMatrix * pos;
+    #else
+    pos = gl_ProjectionMatrix * pos;
+    #endif
 
     return pos;
 }
+#endif
 
 void main() {
     // Transform to view space
     vec4 pos = gl_ModelViewMatrix * gl_Vertex;
-    if (overlay) {
-        // When rendering with orthographic projection, immediately apply the projection matrix
-        pos = gl_ProjectionMatrix * pos;
-        pos /= pos.w;
-        // and position the result (NDC) such that (0, 0, 0) is right in front of the camera at one block distance
-        pos.z *= 0.01; // but almost flat
-        pos.z *= -1.0; // forward for NDC is towards positive but per OpenGL convention it should be towards negative
-        pos += vec4(0.0, 0.0, -1.0, 0.0);
-        // finally, pretend we were doing perspective projection all along
-        float n = 0.01;
-        float f = 2.0;
-        float l = n; // take up 90 degree of FOV
-        float t = l; // in either direction
-        projectionMatrix[0] = vec4(n/l, 0.0, 0.0, 0.0);
-        projectionMatrix[1] = vec4(0.0, n/t, 0.0, 0.0);
-        projectionMatrix[2] = vec4(0.0, 0.0, -(f+n)/(f-n), -1.0);
-        projectionMatrix[3] = vec4(0.0, 0.0, -2.0*f*n/(f-n), 0.0);
-    } else {
-        projectionMatrix = gl_ProjectionMatrix;
-    }
+
+    #ifdef OVERLAY
+    // When rendering with orthographic projection, immediately apply the projection matrix
+    pos = gl_ProjectionMatrix * pos;
+    pos /= pos.w;
+    // and position the result (NDC) such that (0, 0, 0) is right in front of the camera at one block distance
+    pos.z *= 0.01; // but almost flat
+    pos.z *= -1.0; // forward for NDC is towards positive but per OpenGL convention it should be towards negative
+    pos += vec4(0.0, 0.0, -1.0, 0.0);
+    // finally, continue as if we were doing perspective projection all along
+    #endif
 
     // Offset for stereoscopy
     if (leftEye) {
@@ -78,7 +86,13 @@ void main() {
         pos += vec4(ipd / 2.0, 0.0, 0.0, 0.0);
     }
 
-    #ifndef GS
+    #ifdef GS
+    #ifdef OVERLAY
+    projectionMatrix = overlayProjectionMatrix;
+    #else
+    projectionMatrix = gl_ProjectionMatrix;
+    #endif
+    #else
     pos = transformPos(pos);
     #endif
 
