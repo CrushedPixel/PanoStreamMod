@@ -1,5 +1,6 @@
 package com.replaymod.panostream;
 
+import com.replaymod.panostream.gui.GuiDebug;
 import com.replaymod.panostream.gui.GuiOverlays;
 import com.replaymod.panostream.input.CustomKeyBindings;
 import com.replaymod.panostream.settings.PanoStreamSettings;
@@ -40,6 +41,7 @@ public class PanoStreamMod {
         customKeyBindings = new CustomKeyBindings().register();
 
         new GuiOverlays().register();
+        new GuiDebug().setVisible(Boolean.valueOf(System.getenv("PANOSTREAM_DEBUG_GUI")));
     }
 
 }

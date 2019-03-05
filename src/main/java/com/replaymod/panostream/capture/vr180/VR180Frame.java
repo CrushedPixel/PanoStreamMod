@@ -2,6 +2,7 @@ package com.replaymod.panostream.capture.vr180;
 
 import com.replaymod.panostream.capture.ComposedFrame;
 import com.replaymod.panostream.capture.Program;
+import com.replaymod.panostream.gui.GuiDebug;
 import lombok.Getter;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.shader.Framebuffer;
@@ -64,6 +65,7 @@ public class VR180Frame extends ComposedFrame {
     }
 
     public void composeTopBottom(boolean flip) {
+        if (!GuiDebug.instance.compose) return;
         OpenGlHelper.setActiveTexture(GL13.GL_TEXTURE2);
         leftEye.bindFramebufferTexture();
         OpenGlHelper.setActiveTexture(GL13.GL_TEXTURE3);

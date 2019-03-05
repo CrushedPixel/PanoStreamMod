@@ -222,6 +222,12 @@ public class GuiPanoStreamSettings extends AbstractGuiScreen<GuiPanoStreamSettin
 
         addElements(null, mainPanel, doneButton);
 
+        if (GuiDebug.instance.isVisible()) {
+            mainPanel.addElements(null, new GuiButton().setLabel("Debug").onClick(() -> {
+                GuiDebug.instance.setMouseVisible(true);
+            }));
+        }
+
         setLayout(new CustomLayout<GuiPanoStreamSettings>() {
             @Override
             protected void layout(GuiPanoStreamSettings container, int width, int height) {

@@ -1,6 +1,7 @@
 package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
+import com.replaymod.panostream.gui.GuiDebug;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.Tessellator;
@@ -51,7 +52,7 @@ public abstract class MixinFontRenderer {
         boolean wasTessellating = false;
         if (capturer != null) {
             wasTessellating = capturer.isTessellationActive();
-            capturer.disableTessellation();
+            capturer.setTessellationActive(GuiDebug.instance.tessellateFonts);
         }
 
         Tessellator tessellator = Tessellator.getInstance();
@@ -106,7 +107,7 @@ public abstract class MixinFontRenderer {
             boolean wasTessellating = false;
             if (capturer != null) {
                 wasTessellating = capturer.isTessellationActive();
-                capturer.disableTessellation();
+                capturer.setTessellationActive(GuiDebug.instance.tessellateFonts);
             }
 
             Tessellator tessellator = Tessellator.getInstance();

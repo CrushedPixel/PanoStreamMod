@@ -1,5 +1,6 @@
 package com.replaymod.panostream.capture;
 
+import com.replaymod.panostream.gui.GuiDebug;
 import com.replaymod.panostream.utils.ByteBufferPool;
 import lombok.Getter;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -48,6 +49,8 @@ public abstract class ComposedFrame {
      * Reads the current composed framebuffer into a ByteBuffer.
      */
     public ByteBuffer getByteBuffer() {
+        if (!GuiDebug.instance.transfer) return ByteBufferPool.allocate(pbo.getSize());
+
         transferToPBO();
 
         // read the PBO's contents into a ByteBuffer

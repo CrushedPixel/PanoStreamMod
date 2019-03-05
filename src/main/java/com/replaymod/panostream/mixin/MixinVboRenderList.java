@@ -1,6 +1,7 @@
 package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
+import com.replaymod.panostream.gui.GuiDebug;
 import net.minecraft.client.renderer.ChunkRenderContainer;
 import net.minecraft.client.renderer.VboRenderList;
 import net.minecraft.client.renderer.chunk.RenderChunk;
@@ -45,6 +46,13 @@ public abstract class MixinVboRenderList extends ChunkRenderContainer {
         Vec3d center = renderChunk.boundingBox.getCenter();
         double d2 = center.squareDistanceTo(viewEntityX, viewEntityY, viewEntityZ);
         boolean tessellate = d2 <= 16 * 16;
+
+        if (GuiDebug.instance.alwaysTessellateChunks) {
+            tessellate = true;
+        }
+        if (GuiDebug.instance.neverTessellateChunk) {
+            tessellate = false;
+        }
 
         if (tessellate) {
             capturer.enableTessellation();

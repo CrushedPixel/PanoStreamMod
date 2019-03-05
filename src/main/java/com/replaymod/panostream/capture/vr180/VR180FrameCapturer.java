@@ -6,6 +6,7 @@ import com.replaymod.panostream.capture.FrameCapturer;
 import com.replaymod.panostream.capture.Program;
 import com.replaymod.panostream.capture.equi.CaptureState;
 import com.replaymod.panostream.capture.equi.EquirectangularFrameCapturer;
+import com.replaymod.panostream.gui.GuiDebug;
 import com.replaymod.panostream.stream.VideoStreamer;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
@@ -233,15 +234,29 @@ public class VR180FrameCapturer extends FrameCapturer {
         // render left eye
         leftEye = true;
         vr180Frame.bindFramebuffer(true);
+
+        GuiDebug.instance.queryWorldLeft.begin();
         renderWorld();
+        GuiDebug.instance.queryWorldLeft.end();
+
+        GuiDebug.instance.queryGuiLeft.begin();
         renderOverlays(true, mouseX, mouseY);
+        GuiDebug.instance.queryGuiLeft.end();
+
         ComposedFrame.unbindFramebuffer();
 
         // render right eye
         leftEye = false;
         vr180Frame.bindFramebuffer(false);
+
+        GuiDebug.instance.queryWorldRight.begin();
         renderWorld();
+        GuiDebug.instance.queryWorldRight.end();
+
+        GuiDebug.instance.queryGuiRight.begin();
         renderOverlays(false, mouseX, mouseY);
+        GuiDebug.instance.queryGuiRight.end();
+
         ComposedFrame.unbindFramebuffer();
 
         bindProgram(null);
@@ -253,13 +268,20 @@ public class VR180FrameCapturer extends FrameCapturer {
         active = null;
         CaptureState.setCapturing(false);
 
+        GuiDebug.instance.queryCompose.begin();
         vr180Frame.composeTopBottom(flip);
-        return vr180Frame.getByteBuffer();
+        GuiDebug.instance.queryCompose.end();
+
+        GuiDebug.instance.queryTransfer.begin();
+        ByteBuffer frame = vr180Frame.getByteBuffer();
+        GuiDebug.instance.queryTransfer.end();
+
+        return frame;
     }
 
     private void renderWorld() {
         // TODO: DRY with EquirectangularFrameCapturer if possible (base class method?)
-        if (mc.world == null) {
+        if (mc.world == null || !GuiDebug.instance.renderWorld) {
             GlStateManager.clearColor(0.1f, 0.1f, 0.1f, 1.0f);
             GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             return;
@@ -278,11 +300,16 @@ public class VR180FrameCapturer extends FrameCapturer {
     }
 
     private void renderOverlays(boolean left, int mouseX, int mouseY) {
-        if (this.mc.gameSettings.hideGUI && this.mc.currentScreen == null) return;
+        if (this.mc.gameSettings.hideGUI && this.mc.currentScreen == null || !GuiDebug.instance.renderGui) return;
 
         overlay = true;
-        bindProgram(geomTessProgram); // explicit re-bind to update uniforms
-        enableTessellation();
+        if (GuiDebug.instance.tessellateGui) {
+            bindProgram(geomTessProgram); // explicit re-bind to update uniforms
+            enableTessellation();
+        } else {
+            bindProgram(simpleProgram); // explicit re-bind to update uniforms
+            disableTessellation();
+        }
 
         GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
 
