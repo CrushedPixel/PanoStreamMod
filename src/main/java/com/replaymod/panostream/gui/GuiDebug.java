@@ -28,6 +28,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     public boolean neverTessellateChunk = false;
     public boolean tessellateGui = true;
     public boolean tessellateFonts = false;
+    public boolean skipFonts = false;
     public boolean renderWorld = true;
     public boolean renderGui = true;
     public boolean compose = true;
@@ -87,6 +88,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                     new ConfigCheckbox("Never tessellate chunks", neverTessellateChunk, v -> neverTessellateChunk = v),
                     new ConfigCheckbox("Tessellate gui", tessellateGui, v -> tessellateGui = v),
                     new ConfigCheckbox("Tessellate fonts", tessellateFonts, v -> tessellateFonts = v),
+                    new ConfigCheckbox("Skip fonts", skipFonts, v -> skipFonts = v),
                     new ConfigCheckbox("Render world", renderWorld, v -> renderWorld = v),
                     new ConfigCheckbox("Render gui", renderGui, v -> renderGui = v),
                     new ConfigCheckbox("Compose frames into one", compose, v -> compose = v),

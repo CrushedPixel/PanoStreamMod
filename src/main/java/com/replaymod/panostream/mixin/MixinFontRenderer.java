@@ -51,6 +51,7 @@ public abstract class MixinFontRenderer {
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
         boolean wasTessellating = false;
         if (capturer != null) {
+            if (GuiDebug.instance.skipFonts) return l;
             wasTessellating = capturer.isTessellationActive();
             capturer.setTessellationActive(GuiDebug.instance.tessellateFonts);
         }
@@ -102,10 +103,12 @@ public abstract class MixinFontRenderer {
             float f3 = (float)((ch & 255) / 16 * 16);
             float f4 = f1 - f - 0.02F;
             float f5 = italic ? 1.0F : 0.0F;
+            float ret = (f1 - f) / 2.0F + 1.0F;
 
             VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
             boolean wasTessellating = false;
             if (capturer != null) {
+                if (GuiDebug.instance.skipFonts) return ret;
                 wasTessellating = capturer.isTessellationActive();
                 capturer.setTessellationActive(GuiDebug.instance.tessellateFonts);
             }
@@ -129,7 +132,7 @@ public abstract class MixinFontRenderer {
 
             if (capturer != null) capturer.setTessellationActive(wasTessellating);
 
-            return (f1 - f) / 2.0F + 1.0F;
+            return ret;
         }
     }
 }
