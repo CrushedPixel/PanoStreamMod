@@ -50,7 +50,7 @@ public abstract class MixinVboRenderList extends ChunkRenderContainer {
         if (GuiDebug.instance.alwaysTessellateChunks) {
             tessellate = true;
         }
-        if (GuiDebug.instance.neverTessellateChunk) {
+        if (GuiDebug.instance.neverTessellateChunks) {
             tessellate = false;
         }
 

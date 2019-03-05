@@ -25,7 +25,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     public static GuiDebug instance;
 
     public boolean alwaysTessellateChunks = false;
-    public boolean neverTessellateChunk = false;
+    public boolean neverTessellateChunks = false;
     public boolean tessellateGui = true;
     public boolean tessellateFonts = false;
     public boolean skipFonts = false;
@@ -88,7 +88,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
         .setLayout(new VerticalLayout())
             .addElements(null,
                     new ConfigCheckbox("Always tessellate chunks", alwaysTessellateChunks, v -> alwaysTessellateChunks = v),
-                    new ConfigCheckbox("Never tessellate chunks", neverTessellateChunk, v -> neverTessellateChunk = v),
+                    new ConfigCheckbox("Never tessellate chunks", neverTessellateChunks, v -> neverTessellateChunks = v),
                     new ConfigCheckbox("Tessellate gui", tessellateGui, v -> tessellateGui = v),
                     new ConfigCheckbox("Tessellate fonts", tessellateFonts, v -> tessellateFonts = v),
                     new ConfigCheckbox("Skip fonts", skipFonts, v -> skipFonts = v),
