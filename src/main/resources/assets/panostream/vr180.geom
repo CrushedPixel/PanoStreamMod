@@ -2,7 +2,7 @@
 
 #include vr180.glsl
 
-#ifdef SINGLE_PASS
+#ifdef GS_INSTANCING
 layout(lines_adjacency, invocations = 2) in;
 #else
 layout(lines_adjacency) in;
@@ -39,7 +39,7 @@ Vert mixVert(Vert v1, Vert v2, int p, int t) {
 
 Vert in_vert(int idx) {
     vec4 pos = gl_in[idx].gl_Position;
-    #ifdef SINGLE_PASS
+    #ifdef GS_INSTANCING
     // Offset for stereoscopy
     if (leftEye) {
         pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
@@ -80,7 +80,7 @@ void subdivide(Vert v0, Vert v1, Vert v2, Vert v3, int tx, int ty) {
 }
 
 void main() {
-    #ifdef SINGLE_PASS
+    #ifdef GS_INSTANCING
     leftEye = gl_InvocationID == 0;
     #endif
 

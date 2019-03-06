@@ -42,7 +42,7 @@ void main() {
     #endif
 
     // Offset for stereoscopy
-    #ifndef SINGLE_PASS_WITH_GS
+    #ifndef SINGLE_PASS_WITH_GS_INSTANCING
     if (leftEye) {
         pos.x -= ipd * 0.5;
     } else {

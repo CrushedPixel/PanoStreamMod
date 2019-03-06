@@ -1,12 +1,12 @@
-#ifdef SINGLE_PASS
+#ifdef GS_INSTANCING
 #ifdef WITH_GS
-#define SINGLE_PASS_WITH_GS
+#define SINGLE_PASS_WITH_GS_INSTANCING
 #else
-#define SINGLE_PASS_WITHOUT_GS
+#define SINGLE_PASS_WITHOUT_GS_INSTANCING
 #endif
 #endif
 
-#ifdef SINGLE_PASS_WITH_GS
+#ifdef SINGLE_PASS_WITH_GS_INSTANCING
 bool leftEye;
 #else
 uniform bool leftEye;

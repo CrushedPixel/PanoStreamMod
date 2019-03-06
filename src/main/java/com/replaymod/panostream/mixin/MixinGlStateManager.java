@@ -3,6 +3,7 @@ package com.replaymod.panostream.mixin;
 import com.replaymod.panostream.capture.Program;
 import com.replaymod.panostream.capture.equi.CaptureState;
 import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
+import com.replaymod.panostream.gui.GuiDebug;
 import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL32;
@@ -19,7 +20,7 @@ public class MixinGlStateManager {
     /**
      * @reason Geometry shader do not support GL_QUADS, so we use GL_LINES_ADJACENCY instead and transform those into two
      *         triangles in the geometry shader.
-     *         Or, if we aren't using a GS but are in single-pass mode, draw twice
+     *         Or, if we in single-pass mode, draw twice (unless we're also using GS Instancing).
      * @author johni0702
      */
     @Overwrite
@@ -31,6 +32,12 @@ public class MixinGlStateManager {
         if (CaptureState.isGeometryShader()) {
             // Geometry shader is active, so we can only draw quads and must discard everything else
             if (mode == GL11.GL_QUADS) {
+                if (capturer != null && capturer.isSinglePass() && !GuiDebug.instance.geometryShaderInstancing) {
+                    Program program = Program.getBoundProgram();
+                    program.uniforms().leftEye.set(false);
+                    GL11.glDrawArrays(GL32.GL_LINES_ADJACENCY, first, count);
+                    program.uniforms().leftEye.set(true);
+                }
                 GL11.glDrawArrays(GL32.GL_LINES_ADJACENCY, first, count);
             }
         } else {

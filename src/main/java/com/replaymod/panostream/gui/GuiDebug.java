@@ -25,7 +25,8 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     { instance = this; }
     public static GuiDebug instance;
 
-    public boolean singlePass = GLContext.getCapabilities().OpenGL40;
+    public boolean singlePass = true;
+    public boolean geometryShaderInstancing = GLContext.getCapabilities().OpenGL40;
     public boolean alwaysTessellateChunks = false;
     public boolean neverTessellateChunks = false;
     public boolean tessellateGui = true;
@@ -91,11 +92,11 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
             .addElements(null,
                     new ConfigCheckbox("Single Pass", singlePass, v -> {
                         singlePass = v;
-                        VR180FrameCapturer capturer = VR180FrameCapturer.getCurrent();
-                        if (capturer != null) {
-                            capturer.recreateFrame();
-                            capturer.reloadPrograms();
-                        }
+                        reloadFrameAndPrograms();
+                    }),
+                    new ConfigCheckbox("Geometry Shader Instancing", geometryShaderInstancing, v -> {
+                        geometryShaderInstancing = v;
+                        reloadFrameAndPrograms();
                     }),
                     new ConfigCheckbox("Always tessellate chunks", alwaysTessellateChunks, v -> alwaysTessellateChunks = v),
                     new ConfigCheckbox("Never tessellate chunks", neverTessellateChunks, v -> neverTessellateChunks = v),
@@ -125,6 +126,14 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                 y(timingPanel, height - 10 - height(timingPanel));
             }
         });
+    }
+
+    private void reloadFrameAndPrograms() {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getCurrent();
+        if (capturer != null) {
+            capturer.recreateFrame();
+            capturer.reloadPrograms();
+        }
     }
 
     @Override

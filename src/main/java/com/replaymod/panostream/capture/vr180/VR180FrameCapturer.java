@@ -113,15 +113,18 @@ public class VR180FrameCapturer extends FrameCapturer {
             double zed = aspect * tanRemoteFov;
 
             String defineSinglePass = singlePass ? "#define SINGLE_PASS\n" : "";
+            String defineGSI = singlePass && GuiDebug.instance.geometryShaderInstancing ? "#define GS_INSTANCING\n" : "";
+
+            String defines = defineSinglePass + defineGSI;
 
             programs.add(geomTessProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
-                    "#define WITH_GS 1\n" + defineSinglePass));
+                    "#define WITH_GS 1\n" + defines));
             programs.add(geomTessOverlayProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
-                    "#define WITH_GS 1\n#define OVERLAY 1\n" + defineSinglePass));
+                    "#define WITH_GS 1\n#define OVERLAY 1\n" + defines));
             programs.add(simpleProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
-                    defineSinglePass));
+                    defines));
             programs.add(simpleOverlayProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
-                    "#define OVERLAY 1\n" + defineSinglePass));
+                    "#define OVERLAY 1\n" + defines));
 
             for (Program program : programs) {
                 program.use();
