@@ -17,6 +17,7 @@ import de.johni0702.minecraft.gui.layout.HorizontalLayout;
 import de.johni0702.minecraft.gui.layout.VerticalLayout;
 import de.johni0702.minecraft.gui.utils.Consumer;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.GLContext;
 import org.lwjgl.util.ReadableDimension;
 import org.lwjgl.util.ReadablePoint;
 
@@ -24,6 +25,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     { instance = this; }
     public static GuiDebug instance;
 
+    public boolean singlePass = GLContext.getCapabilities().OpenGL40;
     public boolean alwaysTessellateChunks = false;
     public boolean neverTessellateChunks = false;
     public boolean tessellateGui = true;
@@ -47,7 +49,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     private int nanoWorldRightCpu, nanoWorldRightGpu;
     private int nanoGuiLeftCpu, nanoGuiLeftGpu;
     private int nanoGuiRightCpu, nanoGuiRightGpu;
-    private int nanoComposeCpu, nanoComposeGpu;
+    public int nanoComposeCpu, nanoComposeGpu;
     private int nanoTransferCpu, nanoTransferGpu;
     public int programSwitchesCounter;
 
@@ -87,6 +89,14 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     private GuiPanel configPanel = new GuiPanel(this)
         .setLayout(new VerticalLayout())
             .addElements(null,
+                    new ConfigCheckbox("Single Pass", singlePass, v -> {
+                        singlePass = v;
+                        VR180FrameCapturer capturer = VR180FrameCapturer.getCurrent();
+                        if (capturer != null) {
+                            capturer.recreateFrame();
+                            capturer.reloadPrograms();
+                        }
+                    }),
                     new ConfigCheckbox("Always tessellate chunks", alwaysTessellateChunks, v -> alwaysTessellateChunks = v),
                     new ConfigCheckbox("Never tessellate chunks", neverTessellateChunks, v -> neverTessellateChunks = v),
                     new ConfigCheckbox("Tessellate gui", tessellateGui, v -> tessellateGui = v),

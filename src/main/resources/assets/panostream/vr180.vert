@@ -1,6 +1,8 @@
 #version 130
 
-#ifdef GS
+#include vr180.glsl
+
+#ifdef WITH_GS
 out vec4 vertColorV;
 out vec2 textureCoordV;
 out vec2 lightMapCoordV;
@@ -10,12 +12,6 @@ out vec4 vertColor;
 out vec2 textureCoord;
 out vec2 lightMapCoord;
 #endif
-
-uniform bool leftEye;
-uniform float ipd;
-uniform float thetaFactor;
-uniform float phiFactor;
-uniform float zedFactor;
 
 #ifdef OVERLAY
 const float n = 0.01; // near
@@ -28,40 +24,6 @@ const mat4 overlayProjectionMatrix = mat4(
     vec4(0.0, 0.0, -(f+n)/(f-n), -1.0),
     vec4(0.0, 0.0, -2.0*f*n/(f-n), 0.0)
 );
-#endif
-
-#ifndef GS
-vec4 transformPos(vec4 pos) {
-    // Flip space to make forward be towards positive z
-    pos.z *= -1.0;
-
-    // Distort for VR180 (dark magic)
-    float r = length(pos.xyz);
-    vec3 ray = pos.xyz / r;
-    float theta = atan(ray.x, ray.z);
-    // If the vertex is far enough behind the camera, leave it there as otherwise its primitive might end up being
-    // stretched over the whole screen (if the other vertex is also behind us but on a different side).
-    if (abs(theta) < 2.5) {
-        float phi = asin(ray.y);
-
-        vec3 newRay = vec3(theta * thetaFactor, phi * phiFactor, zedFactor);
-        newRay = normalize(newRay) * r;
-
-        pos = vec4(newRay, 1.0);
-    }
-
-    // Flip space back to OpenGL convention (negative z is forward)
-    pos.z *= -1.0;
-
-    // Transform to screen space
-    #ifdef OVERLAY
-    pos = overlayProjectionMatrix * pos;
-    #else
-    pos = gl_ProjectionMatrix * pos;
-    #endif
-
-    return pos;
-}
 #endif
 
 void main() {
@@ -80,26 +42,39 @@ void main() {
     #endif
 
     // Offset for stereoscopy
+    #ifdef SINGLE_PASS
+    #ifndef WITH_GS
     if (leftEye) {
         pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
     } else {
         pos += vec4(ipd / 2.0, 0.0, 0.0, 0.0);
     }
+    #endif
+    #else
+    if (leftEye) {
+        pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+    } else {
+        pos += vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+    }
+    #endif
 
-    #ifdef GS
+    #ifdef WITH_GS
     #ifdef OVERLAY
     projectionMatrix = overlayProjectionMatrix;
     #else
     projectionMatrix = gl_ProjectionMatrix;
     #endif
+    gl_Position = pos;
     #else
-    pos = transformPos(pos);
+    #ifdef OVERLAY
+    gl_Position = vr180Projection(overlayProjectionMatrix, pos);
+    #else
+    gl_Position = vr180Projection(gl_ProjectionMatrix, pos);
+    #endif
     #endif
 
-    gl_Position = pos;
-
     // Misc.
-    #ifdef GS
+    #ifdef WITH_GS
     textureCoordV = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
     lightMapCoordV = (gl_TextureMatrix[1] * gl_MultiTexCoord1).st;
     vertColorV = gl_Color;

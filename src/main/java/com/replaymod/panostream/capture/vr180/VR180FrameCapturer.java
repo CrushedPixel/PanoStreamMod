@@ -46,7 +46,8 @@ public class VR180FrameCapturer extends FrameCapturer {
     private static VR180FrameCapturer current;
 
     private int frameSize;
-    protected VR180Frame vr180Frame;
+    private VR180Frame vr180Frame;
+    private VR180Frame singlePassFrame;
 
     private List<Program> programs = new ArrayList<>();
     /**
@@ -61,6 +62,7 @@ public class VR180FrameCapturer extends FrameCapturer {
     private Program simpleOverlayProgram; // GUI variant
 
     private Program boundProgram;
+    private boolean singlePass;
     private boolean tessellation;
     private boolean overlay;
     private boolean leftEye;
@@ -78,11 +80,21 @@ public class VR180FrameCapturer extends FrameCapturer {
     }
 
     public void recreateFrame() {
+        singlePass = GuiDebug.instance.singlePass;
+
         if (vr180Frame != null) {
             vr180Frame.destroy();
             vr180Frame = null;
         }
-        vr180Frame = new VR180Frame(frameSize);
+        if (singlePassFrame != null) {
+            singlePassFrame.destroy();
+            singlePassFrame = null;
+        }
+        if (singlePass) {
+            singlePassFrame = new VR180Frame(frameSize, true);
+        } else {
+            vr180Frame = new VR180Frame(frameSize, false);
+        }
     }
 
     private void loadPrograms() {
@@ -100,13 +112,16 @@ public class VR180FrameCapturer extends FrameCapturer {
             double phi = tanLocalFov / meshFov;
             double zed = aspect * tanRemoteFov;
 
+            String defineSinglePass = singlePass ? "#define SINGLE_PASS\n" : "";
+
             programs.add(geomTessProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
-                    "#define GS 1\n"));
+                    "#define WITH_GS 1\n" + defineSinglePass));
             programs.add(geomTessOverlayProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
-                    "#define GS 1\n#define OVERLAY 1\n"));
-            programs.add(simpleProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER));
+                    "#define WITH_GS 1\n#define OVERLAY 1\n" + defineSinglePass));
+            programs.add(simpleProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
+                    defineSinglePass));
             programs.add(simpleOverlayProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
-                    "#define OVERLAY 1\n"));
+                    "#define OVERLAY 1\n" + defineSinglePass));
 
             for (Program program : programs) {
                 program.use();
@@ -123,8 +138,7 @@ public class VR180FrameCapturer extends FrameCapturer {
         }
     }
 
-    @SuppressWarnings("unused") // to be called from debugger
-    private void reloadPrograms() {
+    public void reloadPrograms() {
         if (boundProgram != null) throw new IllegalStateException();
         for (Program program : programs) {
             program.delete();
@@ -186,7 +200,7 @@ public class VR180FrameCapturer extends FrameCapturer {
             GuiDebug.instance.programSwitchesCounter++;
             program.use();
 
-            program.getUniformVariable("leftEye").set(leftEye);
+            program.uniforms().leftEye.set(leftEye);
             program.getUniformVariable("ipd").set(PanoStreamMod.instance.getPanoStreamSettings().ipd.getValue().floatValue());
 
             // link the GlStateManager's BooleanStates to the fragment shader's uniforms
@@ -234,12 +248,17 @@ public class VR180FrameCapturer extends FrameCapturer {
     }
 
     protected ByteBuffer doCapture(boolean flip) {
-        if (vr180Frame == null) return null;
+        if (!singlePass && vr180Frame == null) return null;
+        if (singlePass && singlePassFrame == null) return null;
 
         active = this;
         CaptureState.setCapturing(true);
         CaptureState.setOrientation(EquirectangularFrameCapturer.Orientation.FRONT);
         GuiDebug.instance.programSwitchesCounter = 0;
+        if (singlePass) {
+            GL11.glEnable(GL11.GL_CLIP_PLANE0);
+            GlStateManager.cullFace(GlStateManager.CullFace.BACK);
+        }
 
         int widthBefore = mc.displayWidth;
         int heightBefore = mc.displayHeight;
@@ -248,11 +267,15 @@ public class VR180FrameCapturer extends FrameCapturer {
         int mouseX = Mouse.getX() * userResolution.getScaledWidth() / mc.displayWidth;
         int mouseY = userResolution.getScaledHeight() - Mouse.getY() * userResolution.getScaledHeight() / mc.displayHeight;
 
-        mc.displayWidth = mc.displayHeight = vr180Frame.getFrameSize();
+        mc.displayWidth = mc.displayHeight = frameSize;
 
         // render left eye
         leftEye = true;
-        vr180Frame.bindFramebuffer(true);
+        if (singlePass) {
+            singlePassFrame.getComposedFramebuffer().bindFramebuffer(true);
+        } else {
+            vr180Frame.bindFramebuffer(true);
+        }
 
         GuiDebug.instance.queryWorldLeft.begin();
         renderWorld();
@@ -264,19 +287,29 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         ComposedFrame.unbindFramebuffer();
 
+        bindProgram(null);
+
         // render right eye
         leftEye = false;
-        vr180Frame.bindFramebuffer(false);
+        if (!singlePass) {
+            vr180Frame.bindFramebuffer(false);
+        }
 
         GuiDebug.instance.queryWorldRight.begin();
-        renderWorld();
+        if (!singlePass) {
+            renderWorld();
+        }
         GuiDebug.instance.queryWorldRight.end();
 
         GuiDebug.instance.queryGuiRight.begin();
-        renderOverlays(false, mouseX, mouseY);
+        if (!singlePass) {
+            renderOverlays(false, mouseX, mouseY);
+        }
         GuiDebug.instance.queryGuiRight.end();
 
-        ComposedFrame.unbindFramebuffer();
+        if (!singlePass) {
+            ComposedFrame.unbindFramebuffer();
+        }
 
         bindProgram(null);
 
@@ -286,13 +319,19 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         active = null;
         CaptureState.setCapturing(false);
+        if (singlePass) {
+            GL11.glDisable(GL11.GL_CLIP_PLANE0);
+            GlStateManager.cullFace(GlStateManager.CullFace.BACK);
+        }
 
         GuiDebug.instance.queryCompose.begin();
-        vr180Frame.composeTopBottom(flip);
+        if (!singlePass) {
+            vr180Frame.composeTopBottom(flip);
+        }
         GuiDebug.instance.queryCompose.end();
 
         GuiDebug.instance.queryTransfer.begin();
-        ByteBuffer frame = vr180Frame.getByteBuffer();
+        ByteBuffer frame = (singlePass ? singlePassFrame : vr180Frame).getByteBuffer();
         GuiDebug.instance.queryTransfer.end();
 
         return frame;
@@ -336,7 +375,7 @@ public class VR180FrameCapturer extends FrameCapturer {
         // temporarily replace Minecraft's framebuffer with our framebuffer as GuiMainMenu explicitly binds it
         Framebuffer before = mc.framebuffer;
         try {
-            mc.framebuffer = vr180Frame.getFramebuffer(left);
+            mc.framebuffer = singlePass ? singlePassFrame.getComposedFramebuffer() : vr180Frame.getFramebuffer(left);
 
             if (mc.player != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
             if (mc.currentScreen != null) {
@@ -352,11 +391,24 @@ public class VR180FrameCapturer extends FrameCapturer {
         }
     }
 
+    public Framebuffer getComposedFramebuffer() {
+        return (singlePass ? singlePassFrame : vr180Frame).getComposedFramebuffer();
+    }
+
+    public boolean isSinglePass() {
+        return singlePass;
+    }
+
     @Override
     public void destroy() {
         geomTessProgram.delete();
         simpleProgram.delete();
-        vr180Frame.destroy();
+        if (vr180Frame != null) {
+            vr180Frame.destroy();
+        }
+        if (singlePassFrame != null) {
+            singlePassFrame.destroy();
+        }
 
         if (current == this) {
             current = null;

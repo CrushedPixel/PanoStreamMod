@@ -22,8 +22,12 @@ public abstract class ComposedFrame {
     private int ready;
 
     protected ComposedFrame(int width, int height) {
+        this(width, height, false);
+    }
+
+    protected ComposedFrame(int width, int height, boolean useDepth) {
         // initialize the framebuffer
-        composedFramebuffer = new Framebuffer(width, height, false);
+        composedFramebuffer = new Framebuffer(width, height, useDepth);
         composedFramebuffer.setFramebufferColor(0.0F, 0.0F, 0.0F, 0.0F);
 
         // initialize the PBO

@@ -2,6 +2,7 @@ package com.replaymod.panostream.capture;
 
 
 import com.replaymod.panostream.capture.equi.CaptureState;
+import com.replaymod.panostream.gui.GuiDebug;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.resources.IResource;
@@ -15,6 +16,7 @@ import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.opengl.Util;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -32,6 +34,7 @@ public class Program {
 
     private final boolean hasGeometryShader;
     private final int program;
+    private final CachedUniforms cachedUniforms;
 
     public Program(ResourceLocation vertexShader, ResourceLocation fragmentShader, String...defines) throws Exception {
         this(vertexShader, null, fragmentShader, defines);
@@ -68,6 +71,8 @@ public class Program {
         if (glGetObjectParameteriARB(program, GL_OBJECT_VALIDATE_STATUS_ARB) == GL11.GL_FALSE) {
             throw new Exception("Error validating: " + getLogInfo(program));
         }
+
+        cachedUniforms = new CachedUniforms();
     }
 
     private int createShader(ResourceLocation resourceLocation, String[] defines, int shaderType) throws Exception {
@@ -80,16 +85,16 @@ public class Program {
                 throw new Exception("glCreateShader failed but no error was set");
             }
 
-            IResource resource = Minecraft.getMinecraft().getResourceManager().getResource(resourceLocation);
-            try (InputStream is = resource.getInputStream()) {
-                List<String> lines = new ArrayList<>(
-                        Arrays.asList(IOUtils.toString(is, StandardCharsets.UTF_8).split("\n")));
-                List<String> result = new ArrayList<>();
-                result.add(lines.remove(0)); // #version directive
-                result.addAll(Arrays.asList(defines));
-                result.addAll(lines);
-                GL20.glShaderSource(shader, String.join("\n", result));
+            List<String> lines = loadShaderSource(resourceLocation);
+            List<String> result = new ArrayList<>();
+            String versionDirective = lines.remove(0);
+            if (shaderType == GL32.GL_GEOMETRY_SHADER && GuiDebug.instance.singlePass) {
+                versionDirective = "#version 400";
             }
+            result.add(versionDirective);
+            result.addAll(Arrays.asList(defines));
+            result.addAll(lines);
+            GL20.glShaderSource(shader, String.join("\n", result));
             OpenGlHelper.glCompileShader(shader);
 
             if (OpenGlHelper.glGetShaderi(shader, OpenGlHelper.GL_COMPILE_STATUS) == GL11.GL_FALSE)
@@ -99,6 +104,30 @@ public class Program {
         } catch (Exception exc) {
             glDeleteObjectARB(shader);
             throw exc;
+        }
+    }
+
+    private List<String> loadShaderSource(ResourceLocation location) throws IOException {
+        IResource resource = Minecraft.getMinecraft().getResourceManager().getResource(location);
+        try (InputStream is = resource.getInputStream()) {
+            List<String> lines = new ArrayList<>(
+                    Arrays.asList(IOUtils.toString(is, StandardCharsets.UTF_8).split("\n")));
+            List<String> result = new ArrayList<>(lines.size());
+            int i = 0;
+            for (String line : lines) {
+                if (line.startsWith("#include ")) {
+                    String target = line.substring("#include ".length());
+                    ResourceLocation targetLocation = new ResourceLocation(location.getNamespace(), target);
+                    result.add("#line 0");
+                    result.addAll(loadShaderSource(targetLocation));
+                    result.add("#line " + (i + 1));
+                } else {
+                    result.add(line);
+                }
+                i++;
+            }
+
+            return result;
         }
     }
 
@@ -123,6 +152,10 @@ public class Program {
 
     public void delete() {
         ARBShaderObjects.glDeleteObjectARB(program);
+    }
+
+    public CachedUniforms uniforms() {
+        return cachedUniforms;
     }
 
     public Uniform getUniformVariable(String name) {
@@ -155,5 +188,12 @@ public class Program {
         public void set(float flt) {
             ARBShaderObjects.glUniform1fARB(location, flt);
         }
+    }
+
+    /**
+     * Pre-cached uniform locations for commonly used uniform names.
+     */
+    public class CachedUniforms {
+        public final Uniform leftEye = getUniformVariable("leftEye");
     }
 }

@@ -1,7 +1,15 @@
 #version 150
 
+#include vr180.glsl
+
+#ifdef SINGLE_PASS
+layout(lines_adjacency, invocations = 2) in;
+#else
 layout(lines_adjacency) in;
-// max_verticies = 4 (without subdivide) + N * (N * 2 + 2) (for subdivide) where N = 10
+#endif
+// max_verticies for overlay is N * (N * 2 + 2) = 220 where N = 10
+// max_verticies for world is 4 (without subdivide) + N * (N * 2 + 2) (for subdivide) = 224 where N = 10
+// we output 4 + 4 + 2 + 2 + 1 = 13 components per vertex
 layout(triangle_strip, max_vertices=224) out;
 
 in vec4 vertColorV[4];
@@ -11,10 +19,6 @@ flat in mat4 projectionMatrix[];
 out vec4 vertColor;
 out vec2 textureCoord;
 out vec2 lightMapCoord;
-
-uniform float thetaFactor;
-uniform float phiFactor;
-uniform float zedFactor;
 
 struct Vert {
     vec4 pos;
@@ -34,45 +38,25 @@ Vert mixVert(Vert v1, Vert v2, int p, int t) {
 }
 
 Vert in_vert(int idx) {
+    vec4 pos = gl_in[idx].gl_Position;
+    #ifdef SINGLE_PASS
+    // Offset for stereoscopy
+    if (leftEye) {
+        pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+    } else {
+        pos += vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+    }
+    #endif
     return Vert(
-        gl_in[idx].gl_Position,
+        pos,
         vertColorV[idx],
         textureCoordV[idx],
         lightMapCoordV[idx]
     );
 }
 
-vec4 transformPos(vec4 pos) {
-    // Flip space to make forward be towards positive z
-    pos.z *= -1.0;
-
-    // Distort for VR180 (dark magic)
-    float r = length(pos.xyz);
-    vec3 ray = pos.xyz / r;
-    float theta = atan(ray.x, ray.z);
-    float phi = asin(ray.y);
-
-    vec3 newRay = vec3(theta * thetaFactor, phi * phiFactor, zedFactor);
-    newRay = normalize(newRay) * r;
-
-    pos = vec4(newRay, 1.0);
-
-    // Flip space back to OpenGL convention (negative z is forward)
-    pos.z *= -1.0;
-
-    // Transform to screen space
-    pos = projectionMatrix[0] * pos;
-
-    return pos;
-}
-
-Vert transformVertex(Vert vert) {
-    vert.pos = transformPos(vert.pos);
-    return vert;
-}
-
 void emitVertex(Vert vert) {
-    gl_Position = vert.pos;
+    gl_Position = vr180Projection(projectionMatrix[0], vert.pos);
     textureCoord = vert.textureCoord;
     lightMapCoord = vert.lightMapCoord;
     vertColor = vert.color;
@@ -85,17 +69,21 @@ void subdivide(Vert v0, Vert v1, Vert v2, Vert v3, int tx, int ty) {
         Vert lb = mixVert(v0, v3, x+1, tx);
         Vert rt = mixVert(v1, v2, x, tx);
         Vert rb = mixVert(v1, v2, x+1, tx);
-        emitVertex(transformVertex(lb));
+        emitVertex(lb);
         for (int y = 0; y < ty; y++) {
-            emitVertex(transformVertex(mixVert(lt, rt, y, ty)));
-            emitVertex(transformVertex(mixVert(lb, rb, y+1, ty)));
+            emitVertex(mixVert(lt, rt, y, ty));
+            emitVertex(mixVert(lb, rb, y+1, ty));
         }
-        emitVertex(transformVertex(rt));
+        emitVertex(rt);
         EndPrimitive();
     }
 }
 
 void main() {
+    #ifdef SINGLE_PASS
+    leftEye = gl_InvocationID == 0;
+    #endif
+
     Vert v0 = in_vert(0);
     Vert v1 = in_vert(1);
     Vert v2 = in_vert(2);
@@ -112,10 +100,10 @@ void main() {
     if (tx > 1 || ty > 1) {
         subdivide(v0, v1, v2, v3, tx, ty);
     } else {
-        emitVertex(transformVertex(v3));
-        emitVertex(transformVertex(v0));
-        emitVertex(transformVertex(v2));
-        emitVertex(transformVertex(v1));
+        emitVertex(v3);
+        emitVertex(v0);
+        emitVertex(v2);
+        emitVertex(v1);
         EndPrimitive();
     }
 
@@ -148,10 +136,10 @@ void main() {
         subdivide(v0, v1, v2, v3, N, N);
     }
     if (d > 9) {
-        emitVertex(transformVertex(v3));
-        emitVertex(transformVertex(v0));
-        emitVertex(transformVertex(v2));
-        emitVertex(transformVertex(v1));
+        emitVertex(v3);
+        emitVertex(v0);
+        emitVertex(v2);
+        emitVertex(v1);
         EndPrimitive();
     }
 

@@ -27,8 +27,8 @@ public class VR180Frame extends ComposedFrame {
 
     private final Program shaderProgram;
 
-    public VR180Frame(int frameSize) {
-        super(frameSize, 2 * frameSize);
+    public VR180Frame(int frameSize, boolean useDepth) {
+        super(frameSize, 2 * frameSize, useDepth);
 
         this.frameSize = frameSize;
 

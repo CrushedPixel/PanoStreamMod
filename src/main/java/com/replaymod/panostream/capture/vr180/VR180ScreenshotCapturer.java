@@ -45,7 +45,7 @@ public class VR180ScreenshotCapturer extends VR180FrameCapturer {
             }
         }
 
-        return vr180Frame.getComposedFramebuffer();
+        return getComposedFramebuffer();
     }
 
     public void captureScreenshotAsync(File gameDirectory) {
