@@ -20,15 +20,15 @@ vec4 vr180Projection(mat4 projectionMatrix, vec4 pos) {
     // Flip space to make forward be towards positive z
     pos.z *= -1.0;
 
-    // Distort for VR180 (dark magic)
-    float r = length(pos.xyz);
-    vec3 ray = pos.xyz / r;
-    float theta = atan(ray.x, ray.z);
     // If the vertex is far enough behind the camera, leave it there as otherwise its primitive might end up being
     // stretched over the whole screen (if the other vertex is also behind us but on a different side).
     // This is a crude estimation for the vertex shader and requires the primitive to be sufficiently small,
     // the geometry shader (which is used for nearby/big things) has an additional exact check.
+    float theta = atan(pos.x, pos.z);
     if (abs(theta) < 2.5) {
+        // Distort for VR180 (dark magic)
+        float r = length(pos.xyz);
+        vec3 ray = pos.xyz / r;
         float phi = asin(ray.y);
 
         vec3 newRay = vec3(theta * thetaFactor, phi * phiFactor, zedFactor);

@@ -37,24 +37,16 @@ void main() {
     // and position the result (NDC) such that (0, 0, 0) is right in front of the camera at one block distance
     pos.z *= 0.01; // but almost flat
     pos.z *= -1.0; // forward for NDC is towards positive but per OpenGL convention it should be towards negative
-    pos += vec4(0.0, 0.0, -1.0, 0.0);
+    pos.z += -1.0; // at one block distance
     // finally, continue as if we were doing perspective projection all along
     #endif
 
     // Offset for stereoscopy
-    #ifdef SINGLE_PASS
-    #ifndef WITH_GS
+    #ifndef SINGLE_PASS_WITH_GS
     if (leftEye) {
-        pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+        pos.x -= ipd * 0.5;
     } else {
-        pos += vec4(ipd / 2.0, 0.0, 0.0, 0.0);
-    }
-    #endif
-    #else
-    if (leftEye) {
-        pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
-    } else {
-        pos += vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+        pos.x += ipd * 0.5;
     }
     #endif
 
@@ -83,5 +75,5 @@ void main() {
     lightMapCoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).st;
     vertColor = gl_Color;
     #endif
-    gl_FogFragCoord = sqrt(pos.x * pos.x + pos.y * pos.y + pos.z * pos.z);
+    gl_FogFragCoord = length(pos.xyz);
 }
