@@ -48,6 +48,8 @@ public class GlTimingQueries {
                 if (GL15.glGetQueryObjectui(query, GL15.GL_QUERY_RESULT_AVAILABLE) == GL11.GL_TRUE) {
                     gpuConsumer.consume(GL15.glGetQueryObjecti(query, GL15.GL_QUERY_RESULT));
                     freeQueryIds.offer(scheduledQueryIds.poll());
+                } else {
+                    break;
                 }
             }
         }
