@@ -122,8 +122,9 @@ public class VR180FrameCapturer extends FrameCapturer {
                             && GuiDebug.instance.geometryShaderInstancing
                             && GuiDebug.instance.alwaysUseGeometryShaderInstancing ? GEOMETRY_SHADER : null;
             String defineGeom = geometryShader != null ? "#define WITH_GS 1\n" : "";
+            String defineDI = singlePass && GuiDebug.instance.drawInstanced ? "#define DRAW_INSTANCED\n" : "";
 
-            String defines = defineSinglePass + defineGSI + defineMaxTessLevel + defineGeom;
+            String defines = defineSinglePass + defineGSI + defineMaxTessLevel + defineGeom + defineDI;
 
             if (GuiDebug.instance.tessellationShader) {
                 programs.add(geomTessProgram = new Program(

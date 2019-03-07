@@ -31,6 +31,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     public int maxTessLevel = 30;
     public boolean geometryShaderInstancing = GLContext.getCapabilities().OpenGL40;
     public boolean alwaysUseGeometryShaderInstancing = false;
+    public boolean drawInstanced = false; // once fully working: GLContext.getCapabilities().OpenGL31;
     public boolean alwaysTessellateChunks = false;
     public boolean neverTessellateChunks = false;
     public boolean tessellateGui = true;
@@ -121,6 +122,10 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                     }),
                     new ConfigCheckbox("Always use GS Instancing", alwaysUseGeometryShaderInstancing, v -> {
                         alwaysUseGeometryShaderInstancing = v;
+                        reloadFrameAndPrograms();
+                    }),
+                    new ConfigCheckbox("draw*Instanced", drawInstanced, v -> {
+                        drawInstanced = v;
                         reloadFrameAndPrograms();
                     }),
                     new ConfigCheckbox("Always tessellate chunks", alwaysTessellateChunks, v -> alwaysTessellateChunks = v),

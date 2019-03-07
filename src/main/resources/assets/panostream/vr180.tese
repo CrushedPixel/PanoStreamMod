@@ -4,6 +4,11 @@
 #error "Cannot use NO_TESSELLATION with TES"
 #endif
 
+#ifdef DRAW_INSTANCED
+in float leftEyeC[gl_MaxPatchVertices];
+#define leftEye bool(leftEyeC[0])
+#endif
+
 #include vr180.glsl
 
 layout(quads) in;

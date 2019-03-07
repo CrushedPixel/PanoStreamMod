@@ -13,10 +13,16 @@ in vec4 vertColorV[];
 in vec2 textureCoordV[];
 in vec2 lightMapCoordV[];
 flat in mat4 projectionMatrix[];
+#ifdef DRAW_INSTANCED
+flat in float leftEyeV[];
+#endif
 out vec4 vertColorC[];
 out vec2 textureCoordC[];
 out vec2 lightMapCoordC[];
 out mat4 projectionMatrixC[];
+#ifdef DRAW_INSTANCED
+out float leftEyeC[];
+#endif
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -24,6 +30,9 @@ void main() {
     textureCoordC[gl_InvocationID] = textureCoordV[gl_InvocationID];
     lightMapCoordC[gl_InvocationID] = lightMapCoordV[gl_InvocationID];
     projectionMatrixC[gl_InvocationID] = projectionMatrix[gl_InvocationID];
+    #ifdef DRAW_INSTANCED
+    leftEyeC[gl_InvocationID] = leftEyeV[gl_InvocationID];
+    #endif
 
     // Tessellation level based on apparent size after vr180 transformation (only an approximation since we'd
     // have to do tessellation to get the actual apparent size which includes any curving).

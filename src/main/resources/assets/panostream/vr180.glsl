@@ -1,3 +1,11 @@
+#if defined(DRAW_INSTANCED) && defined(GS_INSTANCING)
+#undef GS_INSTANCING
+#endif
+
+#if defined(DRAW_INSTANCED) && !defined(SINGLE_PASS)
+#error "DRAW_INSTANCED requires SINGLE_PASS"
+#endif
+
 #ifdef GS_INSTANCING
 #ifdef WITH_GS
 #define SINGLE_PASS_WITH_GS_INSTANCING
@@ -17,7 +25,9 @@
 #ifdef SINGLE_PASS_WITH_GS_INSTANCING
 bool leftEye;
 #else
+#ifndef DRAW_INSTANCED
 uniform bool leftEye;
+#endif
 #endif
 uniform float ipd;
 uniform float thetaFactor;

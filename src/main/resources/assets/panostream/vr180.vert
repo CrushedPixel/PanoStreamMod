@@ -1,4 +1,8 @@
-#version 130
+#version 150 compatibility
+
+#ifdef DRAW_INSTANCED
+bool leftEye;
+#endif
 
 #include vr180.glsl
 
@@ -7,6 +11,9 @@ out vec4 vertColorV;
 out vec2 textureCoordV;
 out vec2 lightMapCoordV;
 flat out mat4 projectionMatrix;
+#ifdef DRAW_INSTANCED
+flat out float leftEyeV;
+#endif
 #else
 out vec4 vertColor;
 out vec2 textureCoord;
@@ -43,6 +50,9 @@ void main() {
 
     // Offset for stereoscopy
     #ifndef SINGLE_PASS_WITH_GS_INSTANCING
+    #ifdef DRAW_INSTANCED
+    leftEye = gl_InstanceID == 0;
+    #endif
     if (leftEye) {
         pos.x -= ipd * 0.5;
     } else {
@@ -67,6 +77,9 @@ void main() {
 
     // Misc.
     #ifdef WITH_INTERMEDIATE
+    #ifdef DRAW_INSTANCED
+    leftEyeV = float(leftEye);
+    #endif
     textureCoordV = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
     lightMapCoordV = (gl_TextureMatrix[1] * gl_MultiTexCoord1).st;
     vertColorV = gl_Color;

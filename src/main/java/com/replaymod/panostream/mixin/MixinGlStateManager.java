@@ -6,6 +6,7 @@ import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import com.replaymod.panostream.gui.GuiDebug;
 import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL31;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.opengl.GL40;
 import org.spongepowered.asm.mixin.Mixin;
@@ -18,6 +19,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(GlStateManager.class)
 public class MixinGlStateManager {
+    private static boolean inGlNewList;
+
     /**
      * @reason Geometry shader do not support GL_QUADS, so we use GL_LINES_ADJACENCY instead and transform those into two
      *         triangles in the geometry shader.
@@ -44,6 +47,7 @@ public class MixinGlStateManager {
 
         if (capturer != null && capturer.isSinglePass()
                 && dbg != null
+                && !dbg.drawInstanced
                 && !(dbg.alwaysUseGeometryShaderInstancing || (CaptureState.isGeometryShader() && dbg.geometryShaderInstancing))) {
             Program program = Program.getBoundProgram();
             program.uniforms().leftEye.set(false);
@@ -51,8 +55,25 @@ public class MixinGlStateManager {
             dbg.glDrawArraysCounter++;
             program.uniforms().leftEye.set(true);
         }
-        GL11.glDrawArrays(mode, first, count);
-        if (dbg != null) dbg.glDrawArraysCounter++;
+        if (capturer != null && capturer.isSinglePass() && dbg != null && dbg.drawInstanced) {
+            if (inGlNewList) {
+                return; // glDrawArraysInstanced cannot be used in display lists
+            }
+            GL31.glDrawArraysInstanced(mode, first, count, 2);
+        } else {
+            GL11.glDrawArrays(mode, first, count);
+        }
+        if (capturer != null && dbg != null) dbg.glDrawArraysCounter++;
+    }
+
+    @Inject(method = "glNewList", at = @At("HEAD"))
+    private static void glNewList(int list, int mode, CallbackInfo ci) {
+        inGlNewList = true;
+    }
+
+    @Inject(method = "glEndList", at = @At("HEAD"))
+    private static void glEndList(CallbackInfo ci) {
+        inGlNewList = false;
     }
 
     @Inject(method = "glBegin", at = @At("HEAD"))

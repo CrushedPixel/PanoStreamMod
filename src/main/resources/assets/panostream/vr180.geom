@@ -1,5 +1,10 @@
 #version 150
 
+#if defined(DRAW_INSTANCED) && !defined(WITH_TESS)
+flat in float leftEyeV[];
+#define leftEye bool(leftEyeV[0])
+#endif
+
 #include vr180.glsl
 
 #ifdef WITH_TES
