@@ -45,7 +45,14 @@ public abstract class MixinVboRenderList extends ChunkRenderContainer {
 
         Vec3d center = renderChunk.boundingBox.getCenter();
         double d2 = center.squareDistanceTo(viewEntityX, viewEntityY, viewEntityZ);
-        boolean tessellate = d2 <= 16 * 16;
+        boolean tessellate;
+        if (GuiDebug.instance.tessellationShader) {
+            // Tessellation shader is far cheaper, so we can me more wasteful on chunks which we run through it
+            // and therefore make sure there are absolutely no discontinuities.
+            tessellate = d2 <= 32 * 32;
+        } else {
+            tessellate = d2 <= 16 * 16;
+        }
 
         if (GuiDebug.instance.alwaysTessellateChunks) {
             tessellate = true;

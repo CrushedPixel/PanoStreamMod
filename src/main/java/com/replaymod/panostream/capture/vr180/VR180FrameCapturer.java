@@ -33,6 +33,8 @@ public class VR180FrameCapturer extends FrameCapturer {
      * Resource locations of the VR180 shader
      */
     private static final ResourceLocation VERTEX_SHADER = new ResourceLocation("panostream", "vr180.vert");
+    private static final ResourceLocation TESSELLATION_CONTROL_SHADER = new ResourceLocation("panostream", "vr180.tesc");
+    private static final ResourceLocation TESSELLATION_EVALUATION_SHADER = new ResourceLocation("panostream", "vr180.tese");
     private static final ResourceLocation GEOMETRY_SHADER = new ResourceLocation("panostream", "vr180.geom");
     private static final ResourceLocation FRAGMENT_SHADER = new ResourceLocation("panostream", "vr180.frag");
 
@@ -114,13 +116,31 @@ public class VR180FrameCapturer extends FrameCapturer {
 
             String defineSinglePass = singlePass ? "#define SINGLE_PASS\n" : "";
             String defineGSI = singlePass && GuiDebug.instance.geometryShaderInstancing ? "#define GS_INSTANCING\n" : "";
+            String defineMaxTessLevel = "#define MAX_TESS_LEVEL " + GuiDebug.instance.maxTessLevel + "\n";
 
-            String defines = defineSinglePass + defineGSI;
+            String defines = defineSinglePass + defineGSI + defineMaxTessLevel;
 
-            programs.add(geomTessProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
-                    "#define WITH_GS 1\n" + defines));
-            programs.add(geomTessOverlayProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
-                    "#define WITH_GS 1\n#define OVERLAY 1\n" + defines));
+            if (GuiDebug.instance.tessellationShader) {
+                programs.add(geomTessProgram = new Program(
+                        VERTEX_SHADER,
+                        TESSELLATION_CONTROL_SHADER,
+                        TESSELLATION_EVALUATION_SHADER,
+                        null,
+                        FRAGMENT_SHADER,
+                        "#define WITH_TES 1\n" + defines));
+                programs.add(geomTessOverlayProgram = new Program(
+                        VERTEX_SHADER,
+                        TESSELLATION_CONTROL_SHADER,
+                        TESSELLATION_EVALUATION_SHADER,
+                        null,
+                        FRAGMENT_SHADER,
+                        "#define WITH_TES 1\n#define OVERLAY 1\n" + defines));
+            } else {
+                programs.add(geomTessProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
+                        "#define WITH_GS 1\n" + defines));
+                programs.add(geomTessOverlayProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
+                        "#define WITH_GS 1\n#define OVERLAY 1\n" + defines));
+            }
             programs.add(simpleProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
                     defines));
             programs.add(simpleOverlayProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
@@ -278,6 +298,9 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         // render left eye
         leftEye = true;
+        if (boundProgram != null) {
+            boundProgram.uniforms().leftEye.set(leftEye);
+        }
         if (singlePass) {
             singlePassFrame.getComposedFramebuffer().bindFramebuffer(true);
         } else {
@@ -298,6 +321,9 @@ public class VR180FrameCapturer extends FrameCapturer {
 
         // render right eye
         leftEye = false;
+        if (boundProgram != null) {
+            boundProgram.uniforms().leftEye.set(leftEye);
+        }
         if (!singlePass) {
             vr180Frame.bindFramebuffer(false);
         }

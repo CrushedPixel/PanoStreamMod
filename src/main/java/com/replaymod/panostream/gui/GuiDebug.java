@@ -27,6 +27,8 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
 
     public boolean wireframe = false;
     public boolean singlePass = true;
+    public boolean tessellationShader = GLContext.getCapabilities().OpenGL40;
+    public int maxTessLevel = 30;
     public boolean geometryShaderInstancing = GLContext.getCapabilities().OpenGL40;
     public boolean alwaysTessellateChunks = false;
     public boolean neverTessellateChunks = false;
@@ -77,6 +79,14 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                     new GuiLabel().setText("Program switches:"), programSwitches, new GuiLabel()
             );
 
+    private GuiNumberField maxTessLevelField = new GuiNumberField().setSize(50, 20).setValidateOnFocusChange(true).setValue(maxTessLevel);
+    {
+        maxTessLevelField.onEnter(() -> {
+            maxTessLevel = Math.max(1, maxTessLevelField.getInteger());
+            maxTessLevelField.setValue(maxTessLevel);
+            reloadFrameAndPrograms();
+        });
+    }
     private GuiNumberField pbosField = new GuiNumberField().setSize(50, 20).setValidateOnFocusChange(true).setValue(pbos);
     {
         pbosField.onEnter(() -> {
@@ -96,6 +106,11 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                         singlePass = v;
                         reloadFrameAndPrograms();
                     }),
+                    new ConfigCheckbox("Tessellation Shader", tessellationShader, v -> {
+                        tessellationShader = v;
+                        reloadFrameAndPrograms();
+                    }),
+                    new GuiPanel().addElements(new HorizontalLayout.Data(0.5), maxTessLevelField, new GuiLabel().setText(" Max Tessellation Level")),
                     new ConfigCheckbox("Geometry Shader Instancing", geometryShaderInstancing, v -> {
                         geometryShaderInstancing = v;
                         reloadFrameAndPrograms();

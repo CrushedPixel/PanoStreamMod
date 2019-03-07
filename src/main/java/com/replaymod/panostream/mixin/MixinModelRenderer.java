@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * triangles in the geometry shader.
  * The ModelRenderer uses display lists so just swapping out the glDrawArrays call is insufficient in its case. Instead
  * we must maintain two display lists and swap them out as needed.
+ * Same for the tessellation shader (except with GL_PATCHES).
  *
  * @author johni0702
  */
@@ -24,20 +25,30 @@ public class MixinModelRenderer {
     @Shadow
     private int displayList;
 
+    private boolean normalActive;
+    private boolean normalCompiled;
+    private int normalDisplayList;
     private boolean geomActive;
-    private boolean otherCompiled;
-    private int otherDisplayList;
+    private boolean geomCompiled;
+    private int geomDisplayList;
+    private boolean tessActive;
+    private boolean tessCompiled;
+    private int tessDisplayList;
 
-    private void swapDisplayList() {
-        int tmpList = otherDisplayList;
-        otherDisplayList = displayList;
-        displayList = tmpList;
-
-        boolean tmpComp = otherCompiled;
-        otherCompiled = compiled;
-        compiled = tmpComp;
-
-        geomActive = !geomActive;
+    private void storeActive() {
+        if (geomActive) {
+            geomActive = false;
+            geomCompiled = compiled;
+            geomDisplayList = displayList;
+        } else if (tessActive) {
+            tessActive = false;
+            tessCompiled = compiled;
+            tessDisplayList = displayList;
+        } else if (normalActive) {
+            normalActive = false;
+            normalCompiled = compiled;
+            normalDisplayList = displayList;
+        }
     }
 
     private void selectDisplayList() {
@@ -45,8 +56,27 @@ public class MixinModelRenderer {
         if (capturer != null) {
             capturer.forceLazyRenderState();
         }
-        if (CaptureState.isGeometryShader() ^ geomActive) {
-            swapDisplayList();
+        if (CaptureState.isGeometryShader()) {
+            if (!geomActive) {
+                storeActive();
+                geomActive = true;
+                compiled = geomCompiled;
+                displayList = geomDisplayList;
+            }
+        } else if (CaptureState.isTessEvalShader()) {
+            if (!tessActive) {
+                storeActive();
+                tessActive = true;
+                compiled = tessCompiled;
+                displayList = tessDisplayList;
+            }
+        } else {
+            if (!normalActive) {
+                storeActive();
+                normalActive = true;
+                compiled = normalCompiled;
+                displayList = normalDisplayList;
+            }
         }
     }
 

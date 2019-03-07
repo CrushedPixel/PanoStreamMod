@@ -22,7 +22,7 @@ public abstract class MixinRenderGlobal {
         if (capturer != null) {
             capturer.forceLazyRenderState();
         }
-        if (!CaptureState.isGeometryShader()) {
+        if (!CaptureState.isGeometryShader() && !CaptureState.isTessEvalShader()) {
             return;
         }
 

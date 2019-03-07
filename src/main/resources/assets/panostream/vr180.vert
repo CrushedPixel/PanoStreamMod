@@ -2,7 +2,7 @@
 
 #include vr180.glsl
 
-#ifdef WITH_GS
+#ifdef WITH_INTERMEDIATE
 out vec4 vertColorV;
 out vec2 textureCoordV;
 out vec2 lightMapCoordV;
@@ -50,7 +50,7 @@ void main() {
     }
     #endif
 
-    #ifdef WITH_GS
+    #ifdef WITH_INTERMEDIATE
     #ifdef OVERLAY
     projectionMatrix = overlayProjectionMatrix;
     #else
@@ -66,7 +66,7 @@ void main() {
     #endif
 
     // Misc.
-    #ifdef WITH_GS
+    #ifdef WITH_INTERMEDIATE
     textureCoordV = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
     lightMapCoordV = (gl_TextureMatrix[1] * gl_MultiTexCoord1).st;
     vertColorV = gl_Color;

@@ -7,6 +7,7 @@ import com.replaymod.panostream.gui.GuiDebug;
 import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL32;
+import org.lwjgl.opengl.GL40;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,6 +21,7 @@ public class MixinGlStateManager {
     /**
      * @reason Geometry shader do not support GL_QUADS, so we use GL_LINES_ADJACENCY instead and transform those into two
      *         triangles in the geometry shader.
+     *         Same for the tessellation shader except we use GL_PATCHES.
      *         Or, if we in single-pass mode, draw twice (unless we're also using GS Instancing).
      * @author johni0702
      */
@@ -39,6 +41,18 @@ public class MixinGlStateManager {
                     program.uniforms().leftEye.set(true);
                 }
                 GL11.glDrawArrays(GL32.GL_LINES_ADJACENCY, first, count);
+            }
+        } else if (CaptureState.isTessEvalShader()) {
+            // Geometry shader is active, so we can only draw quads and must discard everything else
+            if (mode == GL11.GL_QUADS) {
+                GL40.glPatchParameteri(GL40.GL_PATCH_VERTICES, 4);
+                if (capturer != null && capturer.isSinglePass()) {
+                    Program program = Program.getBoundProgram();
+                    program.uniforms().leftEye.set(false);
+                    GL11.glDrawArrays(GL40.GL_PATCHES, first, count);
+                    program.uniforms().leftEye.set(true);
+                }
+                GL11.glDrawArrays(GL40.GL_PATCHES, first, count);
             }
         } else {
             if (capturer != null && capturer.isSinglePass()) {

@@ -20,23 +20,6 @@ out vec4 vertColor;
 out vec2 textureCoord;
 out vec2 lightMapCoord;
 
-struct Vert {
-    vec4 pos;
-    vec4 color;
-    vec2 textureCoord;
-    vec2 lightMapCoord;
-};
-
-Vert mixVert(Vert v1, Vert v2, int p, int t) {
-    float f = float(p) / float(t);
-    return Vert(
-        mix(v1.pos, v2.pos, f),
-        mix(v1.color, v2.color, f),
-        mix(v1.textureCoord, v2.textureCoord, f),
-        mix(v1.lightMapCoord, v2.lightMapCoord, f)
-    );
-}
-
 Vert in_vert(int idx) {
     vec4 pos = gl_in[idx].gl_Position;
     #ifdef GS_INSTANCING

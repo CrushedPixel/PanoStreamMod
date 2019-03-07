@@ -6,6 +6,14 @@
 #endif
 #endif
 
+#ifdef WITH_GS
+#define WITH_INTERMEDIATE
+#endif
+
+#ifdef WITH_TES
+#define WITH_INTERMEDIATE
+#endif
+
 #ifdef SINGLE_PASS_WITH_GS_INSTANCING
 bool leftEye;
 #else
@@ -15,6 +23,26 @@ uniform float ipd;
 uniform float thetaFactor;
 uniform float phiFactor;
 uniform float zedFactor;
+
+struct Vert {
+    vec4 pos;
+    vec4 color;
+    vec2 textureCoord;
+    vec2 lightMapCoord;
+};
+
+Vert mixVert(Vert v1, Vert v2, float f) {
+    return Vert(
+        mix(v1.pos, v2.pos, f),
+        mix(v1.color, v2.color, f),
+        mix(v1.textureCoord, v2.textureCoord, f),
+        mix(v1.lightMapCoord, v2.lightMapCoord, f)
+    );
+}
+
+Vert mixVert(Vert v1, Vert v2, int p, int t) {
+    return mixVert(v1, v2, float(p) / float(t));
+}
 
 vec4 vr180Projection(mat4 projectionMatrix, vec4 pos) {
     // Flip space to make forward be towards positive z
@@ -43,6 +71,7 @@ vec4 vr180Projection(mat4 projectionMatrix, vec4 pos) {
     // Transform to screen space
     pos = projectionMatrix * pos;
 
+    #ifndef NO_SINGLE_PASS_PROJECTION
     #ifdef SINGLE_PASS
     // flip up-side-down (in multi-pass mode this is done by the composition shader)
     pos.y *= -1.0;
@@ -59,6 +88,7 @@ vec4 vr180Projection(mat4 projectionMatrix, vec4 pos) {
         // Clip any primitive reaching into the left eye
         gl_ClipDistance[0] = -pos.y;
     }
+    #endif
     #endif
 
     return pos;

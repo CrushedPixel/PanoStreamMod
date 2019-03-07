@@ -8,12 +8,9 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.resources.IResource;
 import net.minecraft.util.ResourceLocation;
 import org.apache.commons.io.IOUtils;
-import org.lwjgl.opengl.ARBFragmentShader;
-import org.lwjgl.opengl.ARBShaderObjects;
-import org.lwjgl.opengl.ARBVertexShader;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL32;
+import org.lwjgl.opengl.GL40;
 import org.lwjgl.opengl.Util;
 
 import java.io.IOException;
@@ -23,7 +20,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.lwjgl.opengl.ARBShaderObjects.*;
+import static net.minecraft.client.renderer.OpenGlHelper.*;
+import static org.lwjgl.opengl.GL20.GL_INFO_LOG_LENGTH;
+import static org.lwjgl.opengl.GL20.GL_VALIDATE_STATUS;
+import static org.lwjgl.opengl.GL20.glUniform1f;
+import static org.lwjgl.opengl.GL20.glShaderSource;
+import static org.lwjgl.opengl.GL20.glValidateProgram;
 
 public class Program {
     private static ThreadLocal<Program> boundProgram = new ThreadLocal<>();
@@ -33,6 +35,7 @@ public class Program {
     }
 
     private final boolean hasGeometryShader;
+    private final boolean hasTessEvalShader;
     private final int program;
     private final CachedUniforms cachedUniforms;
 
@@ -41,7 +44,27 @@ public class Program {
     }
 
     public Program(ResourceLocation vertexShader, ResourceLocation geometryShader, ResourceLocation fragmentShader, String...defines) throws Exception {
-        int vertShader = createShader(vertexShader, defines, ARBVertexShader.GL_VERTEX_SHADER_ARB);
+        this(vertexShader, null, null, geometryShader, fragmentShader, defines);
+    }
+
+    public Program(ResourceLocation vertexShader,
+                   ResourceLocation tessellationControlShader,
+                   ResourceLocation tessellationEvaluationShader,
+                   ResourceLocation geometryShader,
+                   ResourceLocation fragmentShader,
+                   String...defines) throws Exception {
+        int vertShader = createShader(vertexShader, defines, GL_VERTEX_SHADER);
+        int tessControlShader = 0;
+        if (tessellationControlShader != null) {
+            tessControlShader = createShader(tessellationControlShader, defines, GL40.GL_TESS_CONTROL_SHADER);
+        }
+        int tessEvalShader = 0;
+        if (tessellationEvaluationShader != null) {
+            hasTessEvalShader = true;
+            tessEvalShader = createShader(tessellationEvaluationShader, defines, GL40.GL_TESS_EVALUATION_SHADER);
+        } else {
+            hasTessEvalShader = false;
+        }
         int geomShader = 0;
         if (geometryShader != null) {
             hasGeometryShader = true;
@@ -49,36 +72,44 @@ public class Program {
         } else {
             hasGeometryShader = false;
         }
-        int fragShader = createShader(fragmentShader, defines, ARBFragmentShader.GL_FRAGMENT_SHADER_ARB);
+        int fragShader = createShader(fragmentShader, defines, GL_FRAGMENT_SHADER);
 
-        program = glCreateProgramObjectARB();
+        program = glCreateProgram();
         if (program == 0) {
             throw new Exception("glCreateProgramObjectARB failed");
         }
 
-        glAttachObjectARB(program, vertShader);
+        glAttachShader(program, vertShader);
+        if (tessellationControlShader != null) {
+            glAttachShader(program, tessControlShader);
+        }
+        if (tessellationEvaluationShader != null) {
+            glAttachShader(program, tessEvalShader);
+        }
         if (geometryShader != null) {
-            glAttachObjectARB(program, geomShader);
+            glAttachShader(program, geomShader);
         }
-        glAttachObjectARB(program, fragShader);
+        glAttachShader(program, fragShader);
 
-        glLinkProgramARB(program);
-        if (glGetObjectParameteriARB(program, GL_OBJECT_LINK_STATUS_ARB) == GL11.GL_FALSE) {
-            throw new Exception("Error linking: " + getLogInfo(program));
-        }
-
-        glValidateProgramARB(program);
-        if (glGetObjectParameteriARB(program, GL_OBJECT_VALIDATE_STATUS_ARB) == GL11.GL_FALSE) {
-            throw new Exception("Error validating: " + getLogInfo(program));
+        glLinkProgram(program);
+        if (glGetProgrami(program, GL_LINK_STATUS) == GL11.GL_FALSE) {
+            throw new Exception("Error linking: " + getProgramLogInfo(program));
         }
 
+        glValidateProgram(program);
+        if (glGetProgrami(program, GL_VALIDATE_STATUS) == GL11.GL_FALSE) {
+            throw new Exception("Error validating: " + getProgramLogInfo(program));
+        }
+
+        use();
         cachedUniforms = new CachedUniforms();
+        stopUsing();
     }
 
     private int createShader(ResourceLocation resourceLocation, String[] defines, int shaderType) throws Exception {
         int shader = 0;
         try {
-            shader = OpenGlHelper.glCreateShader(shaderType);
+            shader = glCreateShader(shaderType);
 
             if (shader == 0) {
                 Util.checkGLError();
@@ -94,15 +125,16 @@ public class Program {
             result.add(versionDirective);
             result.addAll(Arrays.asList(defines));
             result.addAll(lines);
-            GL20.glShaderSource(shader, String.join("\n", result));
-            OpenGlHelper.glCompileShader(shader);
+            glShaderSource(shader, String.join("\n", result));
+            glCompileShader(shader);
 
-            if (OpenGlHelper.glGetShaderi(shader, OpenGlHelper.GL_COMPILE_STATUS) == GL11.GL_FALSE)
-                throw new RuntimeException("Error creating shader: " + getLogInfo(shader));
+            if (glGetShaderi(shader, OpenGlHelper.GL_COMPILE_STATUS) == GL11.GL_FALSE)
+                throw new RuntimeException("Error creating shader: "
+                        + glGetShaderInfoLog(shader, glGetShaderi(shader, GL_INFO_LOG_LENGTH)));
 
             return shader;
         } catch (Exception exc) {
-            glDeleteObjectARB(shader);
+            glDeleteShader(shader);
             throw exc;
         }
     }
@@ -131,13 +163,14 @@ public class Program {
         }
     }
 
-    private static String getLogInfo(int obj) {
-        return glGetInfoLogARB(obj, glGetObjectParameteriARB(obj, GL_OBJECT_INFO_LOG_LENGTH_ARB));
+    private static String getProgramLogInfo(int program) {
+        return glGetProgramInfoLog(program, glGetProgrami(program, GL_INFO_LOG_LENGTH));
     }
 
     public void use() {
-        ARBShaderObjects.glUseProgramObjectARB(program);
+        glUseProgram(program);
         CaptureState.setGeometryShader(hasGeometryShader);
+        CaptureState.setTessEvalShader(hasTessEvalShader);
         boundProgram.set(this);
     }
 
@@ -145,13 +178,14 @@ public class Program {
         if (boundProgram.get() != this) {
             throw new IllegalStateException("program is not currently bound");
         }
-        ARBShaderObjects.glUseProgramObjectARB(0);
+        glUseProgram(0);
         CaptureState.setGeometryShader(false);
+        CaptureState.setTessEvalShader(false);
         boundProgram.set(null);
     }
 
     public void delete() {
-        ARBShaderObjects.glDeleteObjectARB(program);
+        glDeleteProgram(program);
     }
 
     public CachedUniforms uniforms() {
@@ -159,7 +193,7 @@ public class Program {
     }
 
     public Uniform getUniformVariable(String name) {
-        return new Uniform(ARBShaderObjects.glGetUniformLocationARB(program, name));
+        return new Uniform(glGetUniformLocation(program, name));
     }
 
     public void setUniformValue(String name, int value) {
@@ -178,15 +212,15 @@ public class Program {
         }
 
         public void set(boolean bool) {
-            ARBShaderObjects.glUniform1iARB(location, bool ? GL11.GL_TRUE : GL11.GL_FALSE);
+            glUniform1i(location, bool ? GL11.GL_TRUE : GL11.GL_FALSE);
         }
 
         public void set(int integer) {
-            ARBShaderObjects.glUniform1iARB(location, integer);
+            glUniform1i(location, integer);
         }
 
         public void set(float flt) {
-            ARBShaderObjects.glUniform1fARB(location, flt);
+            glUniform1f(location, flt);
         }
     }
 
