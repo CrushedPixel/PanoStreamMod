@@ -25,6 +25,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     { instance = this; }
     public static GuiDebug instance;
 
+    public boolean wireframe = false;
     public boolean singlePass = true;
     public boolean geometryShaderInstancing = GLContext.getCapabilities().OpenGL40;
     public boolean alwaysTessellateChunks = false;
@@ -90,6 +91,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     private GuiPanel configPanel = new GuiPanel(this)
         .setLayout(new VerticalLayout())
             .addElements(null,
+                    new ConfigCheckbox("Wireframe", wireframe, v -> wireframe = v),
                     new ConfigCheckbox("Single Pass", singlePass, v -> {
                         singlePass = v;
                         reloadFrameAndPrograms();

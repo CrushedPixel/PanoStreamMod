@@ -262,6 +262,10 @@ public class VR180FrameCapturer extends FrameCapturer {
             GL11.glEnable(GL11.GL_CLIP_PLANE0);
             GlStateManager.cullFace(GlStateManager.CullFace.BACK);
         }
+        if (GuiDebug.instance.wireframe) {
+            GlStateManager.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_LINE);
+            GlStateManager.glLineWidth(2.0F);
+        }
 
         int widthBefore = mc.displayWidth;
         int heightBefore = mc.displayHeight;
@@ -325,6 +329,9 @@ public class VR180FrameCapturer extends FrameCapturer {
         if (singlePass) {
             GL11.glDisable(GL11.GL_CLIP_PLANE0);
             GlStateManager.cullFace(GlStateManager.CullFace.BACK);
+        }
+        if (GuiDebug.instance.wireframe) {
+            GlStateManager.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
         }
 
         GuiDebug.instance.queryCompose.begin();
