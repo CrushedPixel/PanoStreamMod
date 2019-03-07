@@ -31,44 +31,28 @@ public class MixinGlStateManager {
         if (capturer != null) {
             capturer.forceLazyRenderState();
         }
-        if (CaptureState.isGeometryShader()) {
-            // Geometry shader is active, so we can only draw quads and must discard everything else
-            if (mode == GL11.GL_QUADS) {
-                if (capturer != null && capturer.isSinglePass() && !GuiDebug.instance.geometryShaderInstancing) {
-                    Program program = Program.getBoundProgram();
-                    program.uniforms().leftEye.set(false);
-                    GL11.glDrawArrays(GL32.GL_LINES_ADJACENCY, first, count);
-                    GuiDebug.instance.glDrawArraysCounter++;
-                    program.uniforms().leftEye.set(true);
-                }
-                GL11.glDrawArrays(GL32.GL_LINES_ADJACENCY, first, count);
-                if (capturer != null) GuiDebug.instance.glDrawArraysCounter++;
-            }
-        } else if (CaptureState.isTessEvalShader()) {
-            // Geometry shader is active, so we can only draw quads and must discard everything else
-            if (mode == GL11.GL_QUADS) {
-                GL40.glPatchParameteri(GL40.GL_PATCH_VERTICES, 4);
-                if (capturer != null && capturer.isSinglePass()) {
-                    Program program = Program.getBoundProgram();
-                    program.uniforms().leftEye.set(false);
-                    GL11.glDrawArrays(GL40.GL_PATCHES, first, count);
-                    GuiDebug.instance.glDrawArraysCounter++;
-                    program.uniforms().leftEye.set(true);
-                }
-                GL11.glDrawArrays(GL40.GL_PATCHES, first, count);
-                if (capturer != null) GuiDebug.instance.glDrawArraysCounter++;
-            }
-        } else {
-            if (capturer != null && capturer.isSinglePass()) {
-                Program program = Program.getBoundProgram();
-                program.uniforms().leftEye.set(false);
-                GL11.glDrawArrays(mode, first, count);
-                GuiDebug.instance.glDrawArraysCounter++;
-                program.uniforms().leftEye.set(true);
-            }
-            GL11.glDrawArrays(mode, first, count);
-            if (capturer != null) GuiDebug.instance.glDrawArraysCounter++;
+        GuiDebug dbg = GuiDebug.instance;
+
+        if (CaptureState.isTessEvalShader()) {
+            if (mode != GL11.GL_QUADS) return; // TES can only draw quads
+            GL40.glPatchParameteri(GL40.GL_PATCH_VERTICES, 4);
+            mode = GL40.GL_PATCHES;
+        } else if (CaptureState.isGeometryShader()) {
+            if (mode != GL11.GL_QUADS) return; // GS can only draw quads
+            mode = GL32.GL_LINES_ADJACENCY;
         }
+
+        if (capturer != null && capturer.isSinglePass()
+                && dbg != null
+                && !(dbg.alwaysUseGeometryShaderInstancing || (CaptureState.isGeometryShader() && dbg.geometryShaderInstancing))) {
+            Program program = Program.getBoundProgram();
+            program.uniforms().leftEye.set(false);
+            GL11.glDrawArrays(mode, first, count);
+            dbg.glDrawArraysCounter++;
+            program.uniforms().leftEye.set(true);
+        }
+        GL11.glDrawArrays(mode, first, count);
+        if (dbg != null) dbg.glDrawArraysCounter++;
     }
 
     @Inject(method = "glBegin", at = @At("HEAD"))

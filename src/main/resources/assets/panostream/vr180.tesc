@@ -1,5 +1,9 @@
 #version 400
 
+#ifdef NO_TESSELLATION
+#error "Cannot use NO_TESSELLATION with TCS"
+#endif
+
 #define NO_SINGLE_PASS_PROJECTION
 #include vr180.glsl
 

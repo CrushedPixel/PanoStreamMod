@@ -117,22 +117,27 @@ public class VR180FrameCapturer extends FrameCapturer {
             String defineSinglePass = singlePass ? "#define SINGLE_PASS\n" : "";
             String defineGSI = singlePass && GuiDebug.instance.geometryShaderInstancing ? "#define GS_INSTANCING\n" : "";
             String defineMaxTessLevel = "#define MAX_TESS_LEVEL " + GuiDebug.instance.maxTessLevel + "\n";
+            ResourceLocation geometryShader =
+                    singlePass
+                            && GuiDebug.instance.geometryShaderInstancing
+                            && GuiDebug.instance.alwaysUseGeometryShaderInstancing ? GEOMETRY_SHADER : null;
+            String defineGeom = geometryShader != null ? "#define WITH_GS 1\n" : "";
 
-            String defines = defineSinglePass + defineGSI + defineMaxTessLevel;
+            String defines = defineSinglePass + defineGSI + defineMaxTessLevel + defineGeom;
 
             if (GuiDebug.instance.tessellationShader) {
                 programs.add(geomTessProgram = new Program(
                         VERTEX_SHADER,
                         TESSELLATION_CONTROL_SHADER,
                         TESSELLATION_EVALUATION_SHADER,
-                        null,
+                        geometryShader,
                         FRAGMENT_SHADER,
                         "#define WITH_TES 1\n" + defines));
                 programs.add(geomTessOverlayProgram = new Program(
                         VERTEX_SHADER,
                         TESSELLATION_CONTROL_SHADER,
                         TESSELLATION_EVALUATION_SHADER,
-                        null,
+                        geometryShader,
                         FRAGMENT_SHADER,
                         "#define WITH_TES 1\n#define OVERLAY 1\n" + defines));
             } else {
@@ -141,10 +146,10 @@ public class VR180FrameCapturer extends FrameCapturer {
                 programs.add(geomTessOverlayProgram = new Program(VERTEX_SHADER, GEOMETRY_SHADER, FRAGMENT_SHADER,
                         "#define WITH_GS 1\n#define OVERLAY 1\n" + defines));
             }
-            programs.add(simpleProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
-                    defines));
-            programs.add(simpleOverlayProgram = new Program(VERTEX_SHADER, FRAGMENT_SHADER,
-                    "#define OVERLAY 1\n" + defines));
+            programs.add(simpleProgram = new Program(VERTEX_SHADER, geometryShader, FRAGMENT_SHADER,
+                    "#define NO_TESSELLATION 1\n" + defines));
+            programs.add(simpleOverlayProgram = new Program(VERTEX_SHADER, geometryShader, FRAGMENT_SHADER,
+                    "#define NO_TESSELLATION 1\n#define OVERLAY 1\n" + defines));
 
             for (Program program : programs) {
                 program.use();

@@ -119,7 +119,7 @@ public class Program {
             List<String> lines = loadShaderSource(resourceLocation);
             List<String> result = new ArrayList<>();
             String versionDirective = lines.remove(0);
-            if (shaderType == GL32.GL_GEOMETRY_SHADER && GuiDebug.instance.singlePass) {
+            if (shaderType == GL32.GL_GEOMETRY_SHADER && GuiDebug.instance.geometryShaderInstancing) {
                 versionDirective = "#version 400";
             }
             result.add(versionDirective);

@@ -2,19 +2,33 @@
 
 #include vr180.glsl
 
+#ifdef WITH_TES
+// When using TES, tessellation has already been taken care of, we're just using instancing for stereoscopy
+#define NO_TESSELLATION
+#define IN_VERTS 3
+#define MAX_OUT_VERTS 3 // merely using instancing for stereoscopy
+layout(triangles, invocations = 2) in;
+#else
+#define IN_VERTS 4
+#ifdef NO_TESSELLATION
+#define MAX_OUT_VERTS 4
+#else
+// max_verticies for overlay is N * (N * 2 + 2) = 220 where N = 10
+// max_verticies for world is 4 (without subdivide) + N * (N * 2 + 2) (for subdivide) = 224 where N = 10
+// we output 4 + 4 + 2 + 2 + 1 = 13 components per vertex
+#define MAX_OUT_VERTS 224
+#endif
 #ifdef GS_INSTANCING
 layout(lines_adjacency, invocations = 2) in;
 #else
 layout(lines_adjacency) in;
 #endif
-// max_verticies for overlay is N * (N * 2 + 2) = 220 where N = 10
-// max_verticies for world is 4 (without subdivide) + N * (N * 2 + 2) (for subdivide) = 224 where N = 10
-// we output 4 + 4 + 2 + 2 + 1 = 13 components per vertex
-layout(triangle_strip, max_vertices=224) out;
+#endif
+layout(triangle_strip, max_vertices=MAX_OUT_VERTS) out;
 
-in vec4 vertColorV[4];
-in vec2 textureCoordV[4];
-in vec2 lightMapCoordV[4];
+in vec4 vertColorV[IN_VERTS];
+in vec2 textureCoordV[IN_VERTS];
+in vec2 lightMapCoordV[IN_VERTS];
 flat in mat4 projectionMatrix[];
 out vec4 vertColor;
 out vec2 textureCoord;
@@ -70,7 +84,25 @@ void main() {
     Vert v0 = in_vert(0);
     Vert v1 = in_vert(1);
     Vert v2 = in_vert(2);
+    #if IN_VERTS > 3
     Vert v3 = in_vert(3);
+    #endif
+
+    #ifdef NO_TESSELLATION
+
+    #if IN_VERTS == 3
+    emitVertex(v0);
+    emitVertex(v1);
+    emitVertex(v2);
+    #else
+    emitVertex(v3);
+    emitVertex(v0);
+    emitVertex(v2);
+    emitVertex(v1);
+    #endif
+    EndPrimitive();
+
+    #else
 
     #ifdef OVERLAY
 
@@ -126,5 +158,6 @@ void main() {
         EndPrimitive();
     }
 
+    #endif
     #endif
 }
