@@ -55,6 +55,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     private int nanoGuiRightCpu, nanoGuiRightGpu;
     public int nanoComposeCpu, nanoComposeGpu;
     private int nanoTransferCpu, nanoTransferGpu;
+    public int glDrawArraysCounter;
     public int programSwitchesCounter;
 
     private GuiLabel renderTimeWorldCpu = new GuiLabel(), renderTimeWorldGpu = new GuiLabel();
@@ -64,6 +65,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     private GuiLabel renderTimeBothCpu = new GuiLabel(), renderTimeBothGpu = new GuiLabel();
     private GuiLabel composeTimeCpu = new GuiLabel(), composeTimeGpu = new GuiLabel();
     private GuiLabel transferTimeCpu = new GuiLabel(), transferTimeGpu = new GuiLabel();
+    private GuiLabel glDrawArrays = new GuiLabel();
     private GuiLabel programSwitches = new GuiLabel();
     private GuiPanel timingPanel = new GuiPanel(this)
             .setLayout(new GridLayout().setCellsEqualSize(true).setColumns(3).setSpacingX(5))
@@ -76,6 +78,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                     new GuiLabel().setText("Render both:"), renderTimeBothCpu, renderTimeBothGpu,
                     new GuiLabel().setText("Compose:"), composeTimeCpu, composeTimeGpu,
                     new GuiLabel().setText("Transfer:"), transferTimeCpu, transferTimeGpu,
+                    new GuiLabel().setText("glDrawArrays:"), glDrawArrays, new GuiLabel(),
                     new GuiLabel().setText("Program switches:"), programSwitches, new GuiLabel()
             );
 
@@ -172,6 +175,7 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
         composeTimeGpu.setText(String.format("%,d", nanoComposeGpu));
         transferTimeGpu.setText(String.format("%,d", nanoTransferGpu));
 
+        glDrawArrays.setText(String.format("%,d", glDrawArraysCounter));
         programSwitches.setText(String.format("%,d", programSwitchesCounter));
         super.draw(renderer, size, renderInfo);
     }

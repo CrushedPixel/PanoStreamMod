@@ -277,6 +277,7 @@ public class VR180FrameCapturer extends FrameCapturer {
         active = this;
         CaptureState.setCapturing(true);
         CaptureState.setOrientation(EquirectangularFrameCapturer.Orientation.FRONT);
+        GuiDebug.instance.glDrawArraysCounter = 0;
         GuiDebug.instance.programSwitchesCounter = 0;
         if (singlePass) {
             GL11.glEnable(GL11.GL_CLIP_PLANE0);

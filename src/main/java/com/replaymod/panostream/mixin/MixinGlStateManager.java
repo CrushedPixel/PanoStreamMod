@@ -38,9 +38,11 @@ public class MixinGlStateManager {
                     Program program = Program.getBoundProgram();
                     program.uniforms().leftEye.set(false);
                     GL11.glDrawArrays(GL32.GL_LINES_ADJACENCY, first, count);
+                    GuiDebug.instance.glDrawArraysCounter++;
                     program.uniforms().leftEye.set(true);
                 }
                 GL11.glDrawArrays(GL32.GL_LINES_ADJACENCY, first, count);
+                if (capturer != null) GuiDebug.instance.glDrawArraysCounter++;
             }
         } else if (CaptureState.isTessEvalShader()) {
             // Geometry shader is active, so we can only draw quads and must discard everything else
@@ -50,18 +52,22 @@ public class MixinGlStateManager {
                     Program program = Program.getBoundProgram();
                     program.uniforms().leftEye.set(false);
                     GL11.glDrawArrays(GL40.GL_PATCHES, first, count);
+                    GuiDebug.instance.glDrawArraysCounter++;
                     program.uniforms().leftEye.set(true);
                 }
                 GL11.glDrawArrays(GL40.GL_PATCHES, first, count);
+                if (capturer != null) GuiDebug.instance.glDrawArraysCounter++;
             }
         } else {
             if (capturer != null && capturer.isSinglePass()) {
                 Program program = Program.getBoundProgram();
                 program.uniforms().leftEye.set(false);
                 GL11.glDrawArrays(mode, first, count);
+                GuiDebug.instance.glDrawArraysCounter++;
                 program.uniforms().leftEye.set(true);
             }
             GL11.glDrawArrays(mode, first, count);
+            if (capturer != null) GuiDebug.instance.glDrawArraysCounter++;
         }
     }
 
