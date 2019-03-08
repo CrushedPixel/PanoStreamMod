@@ -584,4 +584,8 @@ public class VR180FrameCapturer extends FrameCapturer {
     public VR180FrameCapturer getThis() {
         return this;
     }
+
+    public void setOverlay(boolean overlay) {
+        this.overlay = overlay;
+    }
 }

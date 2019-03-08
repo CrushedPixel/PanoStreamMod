@@ -1,6 +1,5 @@
 package com.replaymod.panostream.mixin;
 
-import com.replaymod.panostream.capture.Program;
 import com.replaymod.panostream.capture.equi.CaptureState;
 import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import net.minecraft.client.Minecraft;
@@ -34,8 +33,10 @@ public class MixinGuiIngame extends Gui {
             guiIngame.drawTexturedModalRect(x, y, textureX, textureY, width, height);
         } else {
             Minecraft mc = Minecraft.getMinecraft();
-            Program program = Program.getBoundProgram();
-            program.getUniformVariable("overlay").set(false);
+            if (capturer != null) {
+                capturer.setOverlay(false);
+                capturer.forceLazyRenderState();
+            }
 
             float oldZLevel = zLevel;
             zLevel = 0;
@@ -64,7 +65,9 @@ public class MixinGuiIngame extends Gui {
             GlStateManager.popMatrix();
             zLevel = oldZLevel;
 
-            program.getUniformVariable("overlay").set(true);
+            if (capturer != null) {
+                capturer.setOverlay(true);
+            }
         }
     }
 }
