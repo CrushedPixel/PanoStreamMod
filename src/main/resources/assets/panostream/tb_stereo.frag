@@ -14,14 +14,19 @@ void main() {
     float u = gl_TexCoord[0].x;
     float v = gl_TexCoord[0].y;
 
-    // vertically flip the image if needed
-    if (flip == 1) {
-        v = 1.0 - v;
+    bool leftEye = v < 0.5;
+    if (!leftEye) {
+        v -= 0.5;
     }
 
-    if (v < 0.5) {
-        gl_FragColor = texture2D(leftEyeTex, vec2(u, v * 2.0));
+    // FIXME get rid of this shader in favor of glBlitFramebuffer
+
+    v *= 2.0;
+    v = 1.0 - v;
+
+    if (leftEye) {
+        gl_FragColor = texture2D(leftEyeTex, vec2(u, v));
     } else {
-        gl_FragColor = texture2D(rightEyeTex, vec2(u, (v - 0.5) * 2.0));
+        gl_FragColor = texture2D(rightEyeTex, vec2(u, v));
     }
 }

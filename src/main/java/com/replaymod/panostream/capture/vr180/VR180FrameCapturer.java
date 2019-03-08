@@ -1,9 +1,10 @@
 package com.replaymod.panostream.capture.vr180;
 
 import com.replaymod.panostream.PanoStreamMod;
-import com.replaymod.panostream.capture.ComposedFrame;
+import com.replaymod.panostream.capture.Frame;
 import com.replaymod.panostream.capture.FrameCapturer;
 import com.replaymod.panostream.capture.Program;
+import com.replaymod.panostream.capture.ZeroPassFrame;
 import com.replaymod.panostream.capture.equi.CaptureState;
 import com.replaymod.panostream.capture.equi.EquirectangularFrameCapturer;
 import com.replaymod.panostream.gui.GuiDebug;
@@ -16,6 +17,7 @@ import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.util.ReportedException;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.client.ForgeHooksClient;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
@@ -49,7 +51,8 @@ public class VR180FrameCapturer extends FrameCapturer {
 
     private int frameSize;
     private VR180Frame vr180Frame;
-    private VR180Frame singlePassFrame;
+    private ZeroPassFrame zeroPassFrame;
+    private Frame singlePassFrame;
 
     private List<Program> programs = new ArrayList<>();
     /**
@@ -64,12 +67,16 @@ public class VR180FrameCapturer extends FrameCapturer {
     private Program simpleOverlayProgram; // GUI variant
 
     private Program boundProgram;
+    private int renderDistance;
+    private boolean zeroPass;
     private boolean singlePass;
     private boolean tessellation;
     private boolean overlay;
     private boolean leftEye;
     private BooleanState[] previousStates = new BooleanState[3];
     private BooleanState previousFogState;
+    private Framebuffer mcFramebufferBefore;
+    private int mouseX, mouseY;
 
     public VR180FrameCapturer(int frameSize, int fps, VideoStreamer videoStreamer) {
         super(fps, videoStreamer);
@@ -82,18 +89,25 @@ public class VR180FrameCapturer extends FrameCapturer {
     }
 
     public void recreateFrame() {
-        singlePass = GuiDebug.instance.singlePass;
+        zeroPass = GuiDebug.instance.zeroPass;
+        singlePass = !zeroPass && GuiDebug.instance.singlePass;
 
         if (vr180Frame != null) {
             vr180Frame.destroy();
             vr180Frame = null;
         }
+        if (zeroPassFrame != null) {
+            zeroPassFrame.destroy();
+            zeroPassFrame = null;
+        }
         if (singlePassFrame != null) {
             singlePassFrame.destroy();
             singlePassFrame = null;
         }
-        if (singlePass) {
-            singlePassFrame = new VR180Frame(frameSize, true);
+        if (zeroPass) {
+            zeroPassFrame = new ZeroPassFrame(frameSize, 2 * frameSize);
+        } else if (singlePass) {
+            singlePassFrame = new Frame(frameSize, 2 * frameSize, true);
         } else {
             vr180Frame = new VR180Frame(frameSize, false);
         }
@@ -114,17 +128,22 @@ public class VR180FrameCapturer extends FrameCapturer {
             double phi = tanLocalFov / meshFov;
             double zed = aspect * tanRemoteFov;
 
-            String defineSinglePass = singlePass ? "#define SINGLE_PASS\n" : "";
-            String defineGSI = singlePass && GuiDebug.instance.geometryShaderInstancing ? "#define GS_INSTANCING\n" : "";
-            String defineMaxTessLevel = "#define MAX_TESS_LEVEL " + GuiDebug.instance.maxTessLevel + "\n";
+            renderDistance = mc.gameSettings.renderDistanceChunks * 16;
+
+            boolean multiPass = !zeroPass && !singlePass;
+            String defines = "";
+            defines += GuiDebug.instance.markLeftEye ? "#define MARK_LEFT_EYE\n" : "";
+            defines += "#define FAR_PLANE_DISTANCE " + renderDistance * MathHelper.SQRT_2 + "\n";
+            defines += zeroPass ? "#define ZERO_PASS\n" : "";
+            defines += singlePass ? "#define SINGLE_PASS\n" : "";
+            defines += !multiPass && GuiDebug.instance.geometryShaderInstancing ? "#define GS_INSTANCING\n" : "";
+            defines += "#define MAX_TESS_LEVEL " + GuiDebug.instance.maxTessLevel + "\n";
             ResourceLocation geometryShader =
-                    singlePass
+                    !multiPass
                             && GuiDebug.instance.geometryShaderInstancing
                             && GuiDebug.instance.alwaysUseGeometryShaderInstancing ? GEOMETRY_SHADER : null;
-            String defineGeom = geometryShader != null ? "#define WITH_GS 1\n" : "";
-            String defineDI = singlePass && GuiDebug.instance.drawInstanced ? "#define DRAW_INSTANCED\n" : "";
-
-            String defines = defineSinglePass + defineGSI + defineMaxTessLevel + defineGeom + defineDI;
+            defines += geometryShader != null ? "#define WITH_GS 1\n" : "";
+            defines += !multiPass && GuiDebug.instance.drawInstanced ? "#define DRAW_INSTANCED\n" : "";
 
             if (GuiDebug.instance.tessellationShader) {
                 programs.add(geomTessProgram = new Program(
@@ -229,7 +248,18 @@ public class VR180FrameCapturer extends FrameCapturer {
             GuiDebug.instance.programSwitchesCounter++;
             program.use();
 
-            program.uniforms().leftEye.set(leftEye);
+            if (zeroPass) {
+                float width = zeroPassFrame.getComposedFramebuffer().framebufferWidth;
+                float height = zeroPassFrame.getComposedFramebuffer().framebufferHeight;
+                program.setUniformValue("inverseViewportAspect", height / width);
+                program.setUniformValue("mcAspect", (float) mc.displayWidth / mc.displayHeight);
+                program.setUniformValue("mcWidthFraction", mc.displayWidth / width);
+                program.setUniformValue("mcHeightFraction", mc.displayHeight / height);
+                program.setUniformValue("eyeWidthFraction", frameSize / width);
+                program.setUniformValue("eyeHeightFraction", frameSize / height);
+            } else if (!singlePass) {
+                program.uniforms().renderPass.set(leftEye ? 0 : 1);
+            }
             program.getUniformVariable("ipd").set(PanoStreamMod.instance.getPanoStreamSettings().ipd.getValue().floatValue());
 
             // link the GlStateManager's BooleanStates to the fragment shader's uniforms
@@ -273,20 +303,22 @@ public class VR180FrameCapturer extends FrameCapturer {
 
     @Override
     protected ByteBuffer captureFrame() {
-        return doCapture(true);
+        if (zeroPass) {
+            return doCaptureZeroPass();
+        } else {
+            return doCapture(true);
+        }
     }
 
-    protected ByteBuffer doCapture(boolean flip) {
-        if (!singlePass && vr180Frame == null) return null;
-        if (singlePass && singlePassFrame == null) return null;
-
+    private void prePass() {
         active = this;
         CaptureState.setCapturing(true);
         CaptureState.setOrientation(EquirectangularFrameCapturer.Orientation.FRONT);
-        GuiDebug.instance.glDrawArraysCounter = 0;
-        GuiDebug.instance.programSwitchesCounter = 0;
-        if (singlePass) {
+        if (zeroPass || singlePass) {
             GL11.glEnable(GL11.GL_CLIP_PLANE0);
+            if (zeroPass) {
+                GL11.glEnable(GL11.GL_CLIP_PLANE1);
+            }
             GlStateManager.cullFace(GlStateManager.CullFace.BACK);
         }
         if (GuiDebug.instance.wireframe) {
@@ -294,26 +326,123 @@ public class VR180FrameCapturer extends FrameCapturer {
             GlStateManager.glLineWidth(2.0F);
         }
 
-        int widthBefore = mc.displayWidth;
-        int heightBefore = mc.displayHeight;
-
         ScaledResolution userResolution = new ScaledResolution(mc);
-        int mouseX = Mouse.getX() * userResolution.getScaledWidth() / mc.displayWidth;
-        int mouseY = userResolution.getScaledHeight() - Mouse.getY() * userResolution.getScaledHeight() / mc.displayHeight;
+        mouseX = Mouse.getX() * userResolution.getScaledWidth() / mc.displayWidth;
+        mouseY = userResolution.getScaledHeight() - Mouse.getY() * userResolution.getScaledHeight() / mc.displayHeight;
+    }
 
-        mc.displayWidth = mc.displayHeight = frameSize;
+    private void postPass() {
+        bindProgram(null);
+
+        active = null;
+        CaptureState.setCapturing(false);
+        if (zeroPass || singlePass) {
+            GL11.glDisable(GL11.GL_CLIP_PLANE0);
+            if (zeroPass) {
+                GL11.glDisable(GL11.GL_CLIP_PLANE1);
+            }
+            GlStateManager.cullFace(GlStateManager.CullFace.BACK);
+        }
+        if (GuiDebug.instance.wireframe) {
+            GlStateManager.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
+        }
+    }
+
+    //
+    //  Zero-Pass Mode
+    //
+
+    @Override
+    protected void beginFrame() {
+        if (renderDistance != mc.gameSettings.renderDistanceChunks * 16) {
+            reloadPrograms();
+        }
+
+        if (!zeroPass) return;
+
+        zeroPassFrame.updateSize();
+        zeroPassFrame.getComposedFramebuffer().bindFramebuffer(true);
+        prePass();
+
+        // temporarily replace Minecraft's framebuffer with our framebuffer as GuiMainMenu explicitly binds it
+        mcFramebufferBefore = mc.framebuffer;
+        mc.framebuffer = zeroPassFrame.getComposedFramebuffer();
+
+        GlStateManager.clearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        GlStateManager.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+
+        overlay = false;
+        enableTessellation();
+
+        GuiDebug.instance.queryWorldLeft.begin();
+        if (mc.world == null) {
+            postRenderWorld();
+        }
+    }
+
+    public void postRenderWorld() {
+        if (!zeroPass) return;
+
+        GuiDebug.instance.queryWorldLeft.end();
+
+        GuiDebug.instance.queryWorldRight.begin();
+        GuiDebug.instance.queryWorldRight.end();
+
+        mc.framebuffer = mcFramebufferBefore;
+        postPass();
+
+        GuiDebug.instance.queryCompose.begin();
+        zeroPassFrame.blitToMC();
+        GuiDebug.instance.queryCompose.end();
+    }
+
+    private ByteBuffer doCaptureZeroPass() {
+        assert zeroPass;
+
+        zeroPassFrame.getComposedFramebuffer().bindFramebuffer(true);
+        prePass();
+
+        overlay = true;
+        if (GuiDebug.instance.tessellateGui) {
+            enableTessellation();
+        } else {
+            disableTessellation();
+        }
+        GuiDebug.instance.queryGuiLeft.begin();
+        renderOverlays(true, mouseX, mouseY);
+        GuiDebug.instance.queryGuiLeft.end();
+
+        postPass();
+        Frame.unbindFramebuffer();
+
+        GuiDebug.instance.queryGuiRight.begin();
+        GuiDebug.instance.queryGuiRight.end();
+
+        GuiDebug.instance.queryTransfer.begin();
+        ByteBuffer frame = zeroPassFrame.getByteBuffer();
+        GuiDebug.instance.queryTransfer.end();
+
+        return frame;
+    }
+
+    //
+    //  One-/Multi-Pass Mode
+    //
+
+    protected ByteBuffer doCapture(boolean flip) {
+        assert !zeroPass;
 
         // render left eye
         leftEye = true;
         if (boundProgram != null) {
-            boundProgram.uniforms().leftEye.set(leftEye);
+            boundProgram.uniforms().renderPass.set(0);
         }
         if (singlePass) {
             singlePassFrame.getComposedFramebuffer().bindFramebuffer(true);
         } else {
             vr180Frame.bindFramebuffer(true);
         }
-
+        prePass();
         GuiDebug.instance.queryWorldLeft.begin();
         renderWorld();
         GuiDebug.instance.queryWorldLeft.end();
@@ -322,14 +451,14 @@ public class VR180FrameCapturer extends FrameCapturer {
         renderOverlays(true, mouseX, mouseY);
         GuiDebug.instance.queryGuiLeft.end();
 
-        ComposedFrame.unbindFramebuffer();
+        Frame.unbindFramebuffer();
 
         bindProgram(null);
 
         // render right eye
         leftEye = false;
         if (boundProgram != null) {
-            boundProgram.uniforms().leftEye.set(leftEye);
+            boundProgram.uniforms().renderPass.set(1);
         }
         if (!singlePass) {
             vr180Frame.bindFramebuffer(false);
@@ -348,24 +477,10 @@ public class VR180FrameCapturer extends FrameCapturer {
         GuiDebug.instance.queryGuiRight.end();
 
         if (!singlePass) {
-            ComposedFrame.unbindFramebuffer();
+            Frame.unbindFramebuffer();
         }
 
-        bindProgram(null);
-
-        // restore mc size
-        mc.displayWidth = widthBefore;
-        mc.displayHeight = heightBefore;
-
-        active = null;
-        CaptureState.setCapturing(false);
-        if (singlePass) {
-            GL11.glDisable(GL11.GL_CLIP_PLANE0);
-            GlStateManager.cullFace(GlStateManager.CullFace.BACK);
-        }
-        if (GuiDebug.instance.wireframe) {
-            GlStateManager.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
-        }
+        postPass();
 
         GuiDebug.instance.queryCompose.begin();
         if (!singlePass) {
@@ -418,7 +533,7 @@ public class VR180FrameCapturer extends FrameCapturer {
         // temporarily replace Minecraft's framebuffer with our framebuffer as GuiMainMenu explicitly binds it
         Framebuffer before = mc.framebuffer;
         try {
-            mc.framebuffer = singlePass ? singlePassFrame.getComposedFramebuffer() : vr180Frame.getFramebuffer(left);
+            mc.framebuffer = zeroPass ? zeroPassFrame.getComposedFramebuffer() : singlePass ? singlePassFrame.getComposedFramebuffer() : vr180Frame.getFramebuffer(left);
 
             if (mc.player != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
             if (mc.currentScreen != null) {
@@ -435,7 +550,11 @@ public class VR180FrameCapturer extends FrameCapturer {
     }
 
     public Framebuffer getComposedFramebuffer() {
-        return (singlePass ? singlePassFrame : vr180Frame).getComposedFramebuffer();
+        return (zeroPass ? zeroPassFrame : singlePass ? singlePassFrame : vr180Frame).getComposedFramebuffer();
+    }
+
+    public boolean isZeroPass() {
+        return zeroPass;
     }
 
     public boolean isSinglePass() {
@@ -448,6 +567,9 @@ public class VR180FrameCapturer extends FrameCapturer {
         simpleProgram.delete();
         if (vr180Frame != null) {
             vr180Frame.destroy();
+        }
+        if (zeroPassFrame != null) {
+            zeroPassFrame.destroy();
         }
         if (singlePassFrame != null) {
             singlePassFrame.destroy();

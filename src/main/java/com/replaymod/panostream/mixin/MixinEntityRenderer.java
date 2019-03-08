@@ -1,6 +1,7 @@
 package com.replaymod.panostream.mixin;
 
 import com.replaymod.panostream.capture.equi.CaptureState;
+import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import com.replaymod.panostream.utils.ScaledResolutionUtil;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.EntityRenderer;
@@ -18,7 +19,7 @@ public class MixinEntityRenderer {
 
     @Inject(method = "orientCamera", at = @At("HEAD"))
     private void setupCubicFrameRotation(float partialTicks, CallbackInfo ci) {
-        if(!CaptureState.isCapturing()) return;
+        if(!CaptureState.isCapturing() && VR180FrameCapturer.getActive() == null) return;
 
         switch(CaptureState.getOrientation()) {
             case FRONT:
@@ -79,11 +80,20 @@ public class MixinEntityRenderer {
 
     public void gluPerspective(float fovY, float aspect, float zNear, float zFar) {
         //normalizing the FOV for capturing of cubic frames
-        if(CaptureState.isCapturing()) {
+        if(CaptureState.isCapturing() && VR180FrameCapturer.getActive() == null) {
             fovY = 90;
             // TODO: could be 150 in case we're rendering the other way
             aspect = 1;
         }
         Project.gluPerspective(fovY, aspect, zNear, zFar);
+    }
+
+    // RenderWorldLastEvent is too early (before hand gets rendered)
+    @Inject(method = "renderWorld", at = @At("RETURN"))
+    private void postRenderWorld(float partialTicks, long finishTimeNano, CallbackInfo ci) {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        if (capturer != null) {
+            capturer.postRenderWorld();
+        }
     }
 }

@@ -228,6 +228,6 @@ public class Program {
      * Pre-cached uniform locations for commonly used uniform names.
      */
     public class CachedUniforms {
-        public final Uniform leftEye = getUniformVariable("leftEye");
+        public final Uniform renderPass = getUniformVariable("renderPass");
     }
 }

@@ -9,6 +9,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
@@ -19,7 +20,7 @@ public class GuiOverlays extends Registerable<GuiOverlays> {
 
     private final Minecraft mc = Minecraft.getMinecraft();
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onOverlayRender(TickEvent.RenderTickEvent event) {
         if(event.phase != TickEvent.Phase.END) return;
         if(PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getState()

@@ -5,8 +5,8 @@
 #endif
 
 #ifdef DRAW_INSTANCED
-in float leftEyeC[gl_MaxPatchVertices];
-#define leftEye bool(leftEyeC[0])
+in int renderPassC[gl_MaxPatchVertices];
+#define renderPass renderPassC[0]
 #endif
 
 #include vr180.glsl

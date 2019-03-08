@@ -4,6 +4,7 @@ import com.replaymod.panostream.capture.Program;
 import com.replaymod.panostream.capture.equi.CaptureState;
 import com.replaymod.panostream.capture.vr180.VR180FrameCapturer;
 import com.replaymod.panostream.gui.GuiDebug;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL31;
@@ -45,21 +46,27 @@ public class MixinGlStateManager {
             mode = GL32.GL_LINES_ADJACENCY;
         }
 
-        if (capturer != null && capturer.isSinglePass()
+        if (capturer != null
+                && (capturer.isZeroPass() || capturer.isSinglePass())
                 && dbg != null
                 && !dbg.drawInstanced
                 && !(dbg.alwaysUseGeometryShaderInstancing || (CaptureState.isGeometryShader() && dbg.geometryShaderInstancing))) {
             Program program = Program.getBoundProgram();
-            program.uniforms().leftEye.set(false);
+            program.uniforms().renderPass.set(0);
             GL11.glDrawArrays(mode, first, count);
             dbg.glDrawArraysCounter++;
-            program.uniforms().leftEye.set(true);
+            program.uniforms().renderPass.set(1);
+            if (capturer.isZeroPass()) {
+                GL11.glDrawArrays(mode, first, count);
+                dbg.glDrawArraysCounter++;
+                program.uniforms().renderPass.set(2);
+            }
         }
-        if (capturer != null && capturer.isSinglePass() && dbg != null && dbg.drawInstanced) {
+        if (capturer != null && (capturer.isZeroPass() || capturer.isSinglePass()) && dbg != null && dbg.drawInstanced) {
             if (inGlNewList) {
                 return; // glDrawArraysInstanced cannot be used in display lists
             }
-            GL31.glDrawArraysInstanced(mode, first, count, 2);
+            GL31.glDrawArraysInstanced(mode, first, count, capturer.isZeroPass() ? 3 : 2);
         } else {
             GL11.glDrawArrays(mode, first, count);
         }
@@ -86,17 +93,18 @@ public class MixinGlStateManager {
 
     @Redirect(method = "viewport", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glViewport(IIII)V"))
     private static void singlePassViewport(int x, int y, int width, int height) {
+        Minecraft mc = Minecraft.getMinecraft();
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
         if (capturer != null
-                && capturer.isSinglePass()
+                && (capturer.isZeroPass() || capturer.isSinglePass())
                 && x == 0
                 && y == 0
-                && width == capturer.getComposedFramebuffer().framebufferWidth
-                && height == capturer.getComposedFramebuffer().framebufferHeight / 2) {
-            GL11.glViewport(x, y, width, height * 2);
-        } else {
-            GL11.glViewport(x, y, width, height);
+                && width == mc.displayWidth
+                && height == mc.displayHeight) {
+            width = capturer.getComposedFramebuffer().framebufferWidth;
+            height = capturer.getComposedFramebuffer().framebufferHeight;
         }
+        GL11.glViewport(x, y, width, height);
     }
 
     @Shadow
@@ -109,7 +117,7 @@ public class MixinGlStateManager {
     @Overwrite
     public static void cullFace(GlStateManager.CullFace cullFace) {
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
-        if (capturer != null && capturer.isSinglePass()) {
+        if (capturer != null && (capturer.isZeroPass() || capturer.isSinglePass())) {
             switch (cullFace) {
                 case FRONT:
                     cullFace = GlStateManager.CullFace.BACK;

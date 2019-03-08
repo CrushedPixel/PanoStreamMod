@@ -1,34 +1,42 @@
 #version 150
 
 #if defined(DRAW_INSTANCED) && !defined(WITH_TESS)
-flat in float leftEyeV[];
-#define leftEye bool(leftEyeV[0])
+flat in int renderPassV[];
+#define renderPass renderPassV[0]
 #endif
 
 #include vr180.glsl
 
-#ifdef WITH_TES
-// When using TES, tessellation has already been taken care of, we're just using instancing for stereoscopy
-#define NO_TESSELLATION
-#define IN_VERTS 3
-#define MAX_OUT_VERTS 3 // merely using instancing for stereoscopy
-layout(triangles, invocations = 2) in;
-#else
-#define IN_VERTS 4
-#ifdef NO_TESSELLATION
-#define MAX_OUT_VERTS 4
-#else
-// max_verticies for overlay is N * (N * 2 + 2) = 220 where N = 10
-// max_verticies for world is 4 (without subdivide) + N * (N * 2 + 2) (for subdivide) = 224 where N = 10
-// we output 4 + 4 + 2 + 2 + 1 = 13 components per vertex
-#define MAX_OUT_VERTS 224
-#endif
 #ifdef GS_INSTANCING
-layout(lines_adjacency, invocations = 2) in;
+    #ifdef ZERO_PASS
+        #define INVOCATIONS 3
+    #else
+        #define INVOCATIONS 2
+    #endif
 #else
-layout(lines_adjacency) in;
+    #define INVOCATIONS 1
 #endif
+
+#ifdef WITH_TES
+    // When using TES, tessellation has already been taken care of, we're just using instancing for stereoscopy
+    #define NO_TESSELLATION
+    #define IN_VERTS 3
+    #define MAX_OUT_VERTS 3 // merely using instancing for stereoscopy
+    #define PRIMITIVE triangles
+#else
+    #define IN_VERTS 4
+    #ifdef NO_TESSELLATION
+        #define MAX_OUT_VERTS 4
+    #else
+        // max_verticies for overlay is N * (N * 2 + 2) = 220 where N = 10
+        // max_verticies for world is 4 (without subdivide) + N * (N * 2 + 2) (for subdivide) = 224 where N = 10
+        // we output 4 + 4 + 2 + 2 + 1 = 13 components per vertex
+        #define MAX_OUT_VERTS 224
+    #endif
+    #define PRIMITIVE lines_adjacency
 #endif
+
+layout(PRIMITIVE, invocations=INVOCATIONS) in;
 layout(triangle_strip, max_vertices=MAX_OUT_VERTS) out;
 
 in vec4 vertColorV[IN_VERTS];
@@ -43,10 +51,10 @@ Vert in_vert(int idx) {
     vec4 pos = gl_in[idx].gl_Position;
     #ifdef GS_INSTANCING
     // Offset for stereoscopy
-    if (leftEye) {
-        pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
-    } else {
+    if (IS_PASS_LEFT_EYE) {
         pos += vec4(ipd / 2.0, 0.0, 0.0, 0.0);
+    } else if (IS_PASS_RIGHT_EYE) {
+        pos -= vec4(ipd / 2.0, 0.0, 0.0, 0.0);
     }
     #endif
     return Vert(
@@ -83,7 +91,7 @@ void subdivide(Vert v0, Vert v1, Vert v2, Vert v3, int tx, int ty) {
 
 void main() {
     #ifdef GS_INSTANCING
-    leftEye = gl_InvocationID == 0;
+    renderPass = gl_InvocationID;
     #endif
 
     Vert v0 = in_vert(0);
@@ -108,6 +116,15 @@ void main() {
     EndPrimitive();
 
     #else
+
+    if (IS_PASS_MC) {
+        emitVertex(v3);
+        emitVertex(v0);
+        emitVertex(v2);
+        emitVertex(v1);
+        EndPrimitive();
+        return;
+    }
 
     #ifdef OVERLAY
 

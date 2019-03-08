@@ -20,6 +20,7 @@ public abstract class FrameCapturer extends Registerable<FrameCapturer> {
     private final VideoStreamer videoStreamer;
 
     private long lastCaptureTime = System.nanoTime();
+    private boolean skipFrame = true;
 
     public FrameCapturer(int fps, VideoStreamer videoStreamer) {
         this.fps = fps;
@@ -28,23 +29,34 @@ public abstract class FrameCapturer extends Registerable<FrameCapturer> {
 
     @SubscribeEvent
     public void onRenderTick(TickEvent.RenderTickEvent event) {
-        if (!active) return;
-        if (event.phase != TickEvent.Phase.END) return;
+        if (event.phase == TickEvent.Phase.START) {
+            if (!active
+                    || !videoStreamer.getStreamingThread().isActive()
+                    || videoStreamer.getStreamingThread().isStopping()) {
+                skipFrame = true;
+                return;
+            }
 
-        // limit the framerate
-        long curTime = System.nanoTime();
-        if (curTime - lastCaptureTime < 1000 / 1000000 / fps) return;
+            // limit the framerate
+            long curTime = System.nanoTime();
+            skipFrame = curTime - lastCaptureTime < 1000 / 1000000 / fps;
+            if (skipFrame) {
+                return;
+            }
+            lastCaptureTime = curTime;
+            beginFrame();
+        }
 
-        // perform capturing
-        lastCaptureTime = curTime;
-
-        if (videoStreamer.getStreamingThread().isActive() && !videoStreamer.getStreamingThread().isStopping()) {
+        if (event.phase == TickEvent.Phase.END && !skipFrame) {
+            // perform capturing
             ByteBuffer frameBuf = captureFrame();
             if (frameBuf != null) {
                 videoStreamer.writeFrameToStream(frameBuf);
             }
         }
     }
+
+    protected void beginFrame() {}
 
     protected abstract ByteBuffer captureFrame();
 

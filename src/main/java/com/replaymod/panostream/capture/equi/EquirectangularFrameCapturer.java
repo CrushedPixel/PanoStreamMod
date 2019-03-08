@@ -1,7 +1,7 @@
 package com.replaymod.panostream.capture.equi;
 
 import com.replaymod.panostream.PanoStreamMod;
-import com.replaymod.panostream.capture.ComposedFrame;
+import com.replaymod.panostream.capture.Frame;
 import com.replaymod.panostream.capture.FrameCapturer;
 import com.replaymod.panostream.gui.EmptyGuiScreen;
 import com.replaymod.panostream.stream.VideoStreamer;
@@ -67,7 +67,7 @@ public class EquirectangularFrameCapturer extends FrameCapturer {
             renderWorld();
             renderOverlays(mouseX, mouseY);
 
-            ComposedFrame.unbindFramebuffer();
+            Frame.unbindFramebuffer();
         }
 
         float yawCorrection = 0;

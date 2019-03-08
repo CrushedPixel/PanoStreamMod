@@ -25,7 +25,9 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
     { instance = this; }
     public static GuiDebug instance;
 
+    public boolean markLeftEye = false;
     public boolean wireframe = false;
+    public boolean zeroPass = false;
     public boolean singlePass = true;
     public boolean tessellationShader = GLContext.getCapabilities().OpenGL40;
     public int maxTessLevel = 30;
@@ -103,12 +105,34 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
             }
         });
     }
+    private ConfigCheckbox zeroPassCheckbox;
+    private ConfigCheckbox singlePassCheckbox;
+    private ConfigCheckbox renderWorldCheckbox;
+    private ConfigCheckbox renderGuiCheckbox;
+    private ConfigCheckbox useReadPixelsCheckbox;
     private GuiPanel configPanel = new GuiPanel(this)
         .setLayout(new VerticalLayout())
             .addElements(null,
+                    new ConfigCheckbox("Mark left eye", markLeftEye, v -> {
+                        markLeftEye = v;
+                        reloadFrameAndPrograms();
+                    }),
                     new ConfigCheckbox("Wireframe", wireframe, v -> wireframe = v),
-                    new ConfigCheckbox("Single Pass", singlePass, v -> {
+                    zeroPassCheckbox = new ConfigCheckbox("Zero Pass", zeroPass, v -> {
+                        zeroPass = v;
+                        if (v) {
+                            singlePassCheckbox.setChecked(true).onClick();
+                        }
+                        renderWorld = renderWorldCheckbox.setEnabled(!v).isChecked() || v;
+                        renderGui = renderGuiCheckbox.setEnabled(!v).isChecked() || v;
+                        useReadPixels = useReadPixelsCheckbox.setEnabled(!v).isChecked() || v;
+                        reloadFrameAndPrograms();
+                    }),
+                    singlePassCheckbox = new ConfigCheckbox("Single Pass", singlePass, v -> {
                         singlePass = v;
+                        if (v) {
+                            zeroPassCheckbox.setChecked(true).onClick();
+                        }
                         reloadFrameAndPrograms();
                     }),
                     new ConfigCheckbox("Tessellation Shader", tessellationShader, v -> {
@@ -133,15 +157,18 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
                     new ConfigCheckbox("Tessellate gui", tessellateGui, v -> tessellateGui = v),
                     new ConfigCheckbox("Tessellate fonts", tessellateFonts, v -> tessellateFonts = v),
                     new ConfigCheckbox("Skip fonts", skipFonts, v -> skipFonts = v),
-                    new ConfigCheckbox("Render world", renderWorld, v -> renderWorld = v),
-                    new ConfigCheckbox("Render gui", renderGui, v -> renderGui = v),
+                    renderWorldCheckbox = new ConfigCheckbox("Render world", renderWorld, v -> renderWorld = v),
+                    renderGuiCheckbox = new ConfigCheckbox("Render gui", renderGui, v -> renderGui = v),
                     new ConfigCheckbox("Compose frames into one", compose, v -> compose = v),
                     new ConfigCheckbox("Download final frame", transfer, v -> transfer = v),
-                    new ConfigCheckbox("Use glReadPixels", useReadPixels, v -> useReadPixels = v),
+                    useReadPixelsCheckbox = new ConfigCheckbox("Use glReadPixels", useReadPixels, v -> useReadPixels = v),
                     new GuiPanel().addElements(new HorizontalLayout.Data(0.5), pbosField, new GuiLabel().setText(" PBOs"))
             );
 
     {
+        // Propagate en-/disabled state
+        zeroPassCheckbox.setChecked(zeroPass);
+
         setLayout(new CustomLayout<GuiDebug>() {
             @Override
             protected void layout(GuiDebug container, int width, int height) {
@@ -187,6 +214,9 @@ public class GuiDebug extends AbstractGuiOverlay<GuiDebug> implements Typeable {
 
         glDrawArrays.setText(String.format("%,d", glDrawArraysCounter));
         programSwitches.setText(String.format("%,d", programSwitchesCounter));
+        glDrawArraysCounter = 0;
+        programSwitchesCounter = 0;
+
         super.draw(renderer, size, renderInfo);
     }
 

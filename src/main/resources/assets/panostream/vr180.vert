@@ -1,7 +1,7 @@
 #version 150 compatibility
 
 #ifdef DRAW_INSTANCED
-bool leftEye;
+int renderPass;
 #endif
 
 #include vr180.glsl
@@ -12,26 +12,37 @@ out vec2 textureCoordV;
 out vec2 lightMapCoordV;
 flat out mat4 projectionMatrix;
 #ifdef DRAW_INSTANCED
-flat out float leftEyeV;
+flat out int renderPassV;
 #endif
 #else
 out vec4 vertColor;
 out vec2 textureCoord;
 out vec2 lightMapCoord;
+mat4 projectionMatrix;
 #endif
 
 #ifdef OVERLAY
-const float n = 0.01; // near
-const float f = 2.0; // far
-const float l = n; // left; take up 90 degree of FOV
-const float t = l; // top; in either direction
+const float overlayNear = 0.01; // near
+const float overlayFar = 2.0; // far
+const float overlayLeft = overlayNear; // left; take up 90 degree of FOV
+const float overlayTop = overlayLeft; // top; in either direction
 const mat4 overlayProjectionMatrix = mat4(
-    vec4(n/l, 0.0, 0.0, 0.0),
-    vec4(0.0, n/t, 0.0, 0.0),
-    vec4(0.0, 0.0, -(f+n)/(f-n), -1.0),
-    vec4(0.0, 0.0, -2.0*f*n/(f-n), 0.0)
+    vec4(overlayNear/overlayLeft, 0.0, 0.0, 0.0),
+    vec4(0.0, overlayNear/overlayTop, 0.0, 0.0),
+    vec4(0.0, 0.0, -(overlayFar+overlayNear)/(overlayFar-overlayNear), -1.0),
+    vec4(0.0, 0.0, -2.0*overlayFar*overlayNear/(overlayFar-overlayNear), 0.0)
 );
 #endif
+const float worldNear = 0.05; // near
+const float worldFar = FAR_PLANE_DISTANCE; // far
+const float worldLeft = worldNear; // left; take up 90 degree of FOV
+const float worldTop = worldLeft; // top; in either direction
+const mat4 worldProjectionMatrix = mat4(
+vec4(worldNear/worldLeft, 0.0, 0.0, 0.0),
+vec4(0.0, worldNear/worldTop, 0.0, 0.0),
+vec4(0.0, 0.0, -(worldFar+worldNear)/(worldFar-worldNear), -1.0),
+vec4(0.0, 0.0, -2.0*worldFar*worldNear/(worldFar-worldNear), 0.0)
+);
 
 void main() {
     // Transform to view space
@@ -51,34 +62,35 @@ void main() {
     // Offset for stereoscopy
     #ifndef SINGLE_PASS_WITH_GS_INSTANCING
     #ifdef DRAW_INSTANCED
-    leftEye = gl_InstanceID == 0;
+    renderPass = gl_InstanceID;
     #endif
-    if (leftEye) {
-        pos.x -= ipd * 0.5;
-    } else {
+    if (IS_PASS_LEFT_EYE) {
         pos.x += ipd * 0.5;
+    } else if (IS_PASS_RIGHT_EYE) {
+        pos.x -= ipd * 0.5;
     }
     #endif
 
+    if (IS_PASS_MC) {
+        projectionMatrix = gl_ProjectionMatrix;
+    } else {
+        #ifdef OVERLAY
+        projectionMatrix = overlayProjectionMatrix;
+        #else
+        projectionMatrix = worldProjectionMatrix;
+        #endif
+    }
+
     #ifdef WITH_INTERMEDIATE
-    #ifdef OVERLAY
-    projectionMatrix = overlayProjectionMatrix;
-    #else
-    projectionMatrix = gl_ProjectionMatrix;
-    #endif
     gl_Position = pos;
     #else
-    #ifdef OVERLAY
-    gl_Position = vr180Projection(overlayProjectionMatrix, pos);
-    #else
-    gl_Position = vr180Projection(gl_ProjectionMatrix, pos);
-    #endif
+    gl_Position = vr180Projection(projectionMatrix, pos);
     #endif
 
     // Misc.
     #ifdef WITH_INTERMEDIATE
     #ifdef DRAW_INSTANCED
-    leftEyeV = float(leftEye);
+    renderPassV = renderPass;
     #endif
     textureCoordV = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
     lightMapCoordV = (gl_TextureMatrix[1] * gl_MultiTexCoord1).st;

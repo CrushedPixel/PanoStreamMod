@@ -1,6 +1,6 @@
 package com.replaymod.panostream.capture.equi;
 
-import com.replaymod.panostream.capture.ComposedFrame;
+import com.replaymod.panostream.capture.Frame;
 import com.replaymod.panostream.capture.Program;
 import lombok.Getter;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -15,7 +15,7 @@ import org.lwjgl.opengl.GL13;
  * An EquirectangularFrame consists out of six framebuffers,
  * one for each direction.
  */
-public class EquirectangularFrame extends ComposedFrame {
+public class EquirectangularFrame extends Frame {
     
     /**
      * Resource locations of the composition shader

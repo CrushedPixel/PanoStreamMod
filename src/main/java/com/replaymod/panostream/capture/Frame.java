@@ -10,7 +10,7 @@ import org.lwjgl.opengl.GL12;
 
 import java.nio.ByteBuffer;
 
-public abstract class ComposedFrame {
+public class Frame {
 
     /**
      * The framebuffer holding the composed frame.
@@ -18,21 +18,36 @@ public abstract class ComposedFrame {
     @Getter
     protected final Framebuffer composedFramebuffer;
 
+    private int width, height;
     private PixelBufferObject pbos[];
     private int ready;
 
-    protected ComposedFrame(int width, int height) {
+    public Frame(int width, int height) {
         this(width, height, false);
     }
 
-    protected ComposedFrame(int width, int height, boolean useDepth) {
+    public Frame(int width, int height, boolean useDepth) {
         // initialize the framebuffer
         composedFramebuffer = new Framebuffer(width, height, useDepth);
         composedFramebuffer.setFramebufferColor(0.0F, 0.0F, 0.0F, 0.0F);
 
-        // initialize the PBO
-        int bufferSize = width * height * 4;
+        // initialize the PBO array (PBOs are initialized in resize())
         pbos = new PixelBufferObject[GuiDebug.instance.pbos];
+
+        resize(width, height);
+    }
+
+    public void resize(int width, int height) {
+        if (pbos[0] != null) {
+            destroy();
+        }
+
+        this.width = width;
+        this.height = height;
+
+        composedFramebuffer.createFramebuffer(width, height);
+
+        int bufferSize = width * height * 4;
         for (int i = 0; i < pbos.length; i++) {
             pbos[i] = new PixelBufferObject(bufferSize, PixelBufferObject.Usage.READ);
         }
@@ -49,7 +64,7 @@ public abstract class ComposedFrame {
         if (GuiDebug.instance.useReadPixels) {
             composedFramebuffer.bindFramebuffer(true);
             GL11.glReadBuffer(OpenGlHelper.GL_COLOR_ATTACHMENT0);
-            GL11.glReadPixels(0, 0, composedFramebuffer.framebufferWidth, composedFramebuffer.framebufferHeight, GL12.GL_BGRA, GL11.GL_UNSIGNED_BYTE, 0);
+            GL11.glReadPixels(0, 0, width, height, GL12.GL_BGRA, GL11.GL_UNSIGNED_BYTE, 0);
             composedFramebuffer.unbindFramebuffer();
         } else {
             composedFramebuffer.bindFramebufferTexture();
@@ -93,6 +108,7 @@ public abstract class ComposedFrame {
 
     public void destroy() {
         for (PixelBufferObject pbo : pbos) {
+            if (pbo == null) continue;
             pbo.delete();
         }
         composedFramebuffer.deleteFramebuffer();

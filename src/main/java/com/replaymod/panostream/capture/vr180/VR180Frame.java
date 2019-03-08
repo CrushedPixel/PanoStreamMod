@@ -1,6 +1,6 @@
 package com.replaymod.panostream.capture.vr180;
 
-import com.replaymod.panostream.capture.ComposedFrame;
+import com.replaymod.panostream.capture.Frame;
 import com.replaymod.panostream.capture.Program;
 import com.replaymod.panostream.gui.GuiDebug;
 import lombok.Getter;
@@ -12,7 +12,7 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 
-public class VR180Frame extends ComposedFrame {
+public class VR180Frame extends Frame {
 
     /**
      * Resource locations of the composition shader

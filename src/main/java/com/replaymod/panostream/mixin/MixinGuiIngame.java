@@ -30,7 +30,7 @@ public class MixinGuiIngame extends Gui {
         if (capturer != null) {
             capturer.forceLazyRenderState();
         }
-        if (!CaptureState.isCapturing() || !CaptureState.isGeometryShader()) {
+        if (!CaptureState.isCapturing() || !CaptureState.isGeometryShader() && !CaptureState.isTessEvalShader()) {
             guiIngame.drawTexturedModalRect(x, y, textureX, textureY, width, height);
         } else {
             Minecraft mc = Minecraft.getMinecraft();
