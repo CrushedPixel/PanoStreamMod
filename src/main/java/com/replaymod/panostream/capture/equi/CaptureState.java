@@ -36,4 +36,7 @@ public class CaptureState {
     @Getter
     public static boolean distortGUI = false;
 
+    // Static, shared stated between MixinVboRenderList and OFMixinVboRenderList.
+    // To be moved into the mixin once the mixins can be merged because optional Injects are supported.
+    public static boolean tessellateRegion; // whether any chunk in the current region needs tessellation
 }

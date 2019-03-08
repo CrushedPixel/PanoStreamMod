@@ -1,0 +1,11 @@
+{
+  "required": false,
+  "package": "com.replaymod.panostream.mixin.optifine",
+  "mixins": [
+    "OFMixinGlStateManager",
+    "OFMixinVboRenderList"
+  ],
+  "server": [],
+  "client": [],
+  "compatibilityLevel": "JAVA_8"
+}

@@ -102,7 +102,7 @@ jar {
                 'FMLCorePluginContainsFMLMod': 'true',
                 'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
                 'TweakOrder': '0',
-                'MixinConfigs': 'mixins.panostream.json',
+                'MixinConfigs': 'mixins.panostream.json,mixins.panostream.optifine.json',
                 'MixinCompatibilityLevel': 'JAVA_8',
                 'FMLAT': 'panostream_at.cfg'
         )

@@ -11,6 +11,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
+import static com.replaymod.panostream.capture.equi.CaptureState.tessellateRegion;
+
 @Mixin(VboRenderList.class)
 public abstract class MixinVboRenderList extends ChunkRenderContainer {
     private double viewEntityX;
@@ -18,6 +20,9 @@ public abstract class MixinVboRenderList extends ChunkRenderContainer {
     private double viewEntityZ;
 
     private RenderChunk renderChunk;
+
+    // Optifine "Render Region" compatibility
+    private boolean renderRegions; // whether it's enabled
 
     @Override
     public void initialize(double viewEntityXIn, double viewEntityYIn, double viewEntityZIn) {
@@ -27,9 +32,16 @@ public abstract class MixinVboRenderList extends ChunkRenderContainer {
         viewEntityZ = viewEntityZIn;
     }
 
+    @Redirect(method = "renderChunkLayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/RenderChunk;getVertexBufferByLayer(I)Lnet/minecraft/client/renderer/vertex/VertexBuffer;"))
+    private VertexBuffer trackCurrentRenderChunk(RenderChunk renderChunk, int layer) {
+        this.renderChunk = renderChunk;
+        this.renderRegions = true; // assume true. if it isn't, then the method below will be called before drawArrays
+        return renderChunk.getVertexBufferByLayer(layer);
+    }
+
     @Redirect(method = "renderChunkLayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/VboRenderList;preRenderChunk(Lnet/minecraft/client/renderer/chunk/RenderChunk;)V"))
-    private void trackCurrentRenderChunk(VboRenderList vboRenderList, RenderChunk renderChunkIn) {
-        renderChunk = renderChunkIn;
+    private void markAsNotRenderRegions(VboRenderList vboRenderList, RenderChunk renderChunkIn) {
+        renderRegions = false;
         vboRenderList.preRenderChunk(renderChunkIn);
     }
 
@@ -43,6 +55,22 @@ public abstract class MixinVboRenderList extends ChunkRenderContainer {
             return;
         }
 
+        if (renderRegions) {
+            if (!tessellateRegion && isInTessellationRange(renderChunk)) {
+                tessellateRegion = true;
+            }
+            vertexBuffer.drawArrays(mode);
+        } else {
+            capturer.setTessellationActive(isInTessellationRange(renderChunk));
+
+            vertexBuffer.drawArrays(mode);
+
+            capturer.enableTessellation();
+        }
+        renderChunk = null;
+    }
+
+    private boolean isInTessellationRange(RenderChunk renderChunk) {
         Vec3d center = renderChunk.boundingBox.getCenter();
         double d2 = center.squareDistanceTo(viewEntityX, viewEntityY, viewEntityZ);
         boolean tessellate;
@@ -61,16 +89,6 @@ public abstract class MixinVboRenderList extends ChunkRenderContainer {
             tessellate = false;
         }
 
-        if (tessellate) {
-            capturer.enableTessellation();
-        } else {
-            capturer.disableTessellation();
-        }
-
-        vertexBuffer.drawArrays(mode);
-
-        capturer.enableTessellation();
-
-        renderChunk = null;
+        return tessellate;
     }
 }

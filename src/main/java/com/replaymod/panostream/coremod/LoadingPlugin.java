@@ -20,6 +20,7 @@ public class LoadingPlugin implements IFMLLoadingPlugin {
     public LoadingPlugin() {
         MixinBootstrap.init();
         Mixins.addConfiguration("mixins.panostream.json");
+        Mixins.addConfiguration("mixins.panostream.optifine.json");
 
         CodeSource codeSource = getClass().getProtectionDomain().getCodeSource();
         if (codeSource != null) {

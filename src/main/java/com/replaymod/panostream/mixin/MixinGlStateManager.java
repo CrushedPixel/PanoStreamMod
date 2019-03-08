@@ -32,7 +32,7 @@ public class MixinGlStateManager {
     @Overwrite
     public static void glDrawArrays(int mode, int first, int count) {
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
-        if (capturer != null) {
+        if (capturer != null && !inGlNewList) {
             capturer.forceLazyRenderState();
         }
         GuiDebug dbg = GuiDebug.instance;
@@ -54,11 +54,11 @@ public class MixinGlStateManager {
             Program program = Program.getBoundProgram();
             program.uniforms().renderPass.set(0);
             GL11.glDrawArrays(mode, first, count);
-            dbg.glDrawArraysCounter++;
+            dbg.drawCallCounter++;
             program.uniforms().renderPass.set(1);
             if (capturer.isZeroPass()) {
                 GL11.glDrawArrays(mode, first, count);
-                dbg.glDrawArraysCounter++;
+                dbg.drawCallCounter++;
                 program.uniforms().renderPass.set(2);
             }
         }
@@ -70,11 +70,15 @@ public class MixinGlStateManager {
         } else {
             GL11.glDrawArrays(mode, first, count);
         }
-        if (capturer != null && dbg != null) dbg.glDrawArraysCounter++;
+        if (capturer != null && dbg != null) dbg.drawCallCounter++;
     }
 
     @Inject(method = "glNewList", at = @At("HEAD"))
     private static void glNewList(int list, int mode, CallbackInfo ci) {
+        VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
+        if (capturer != null) {
+            capturer.forceLazyRenderState();
+        }
         inGlNewList = true;
     }
 
@@ -86,7 +90,7 @@ public class MixinGlStateManager {
     @Inject(method = "glBegin", at = @At("HEAD"))
     private static void forceLazyState(int mode, CallbackInfo ci) {
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
-        if (capturer != null) {
+        if (capturer != null && !inGlNewList) {
             capturer.forceLazyRenderState();
         }
     }
