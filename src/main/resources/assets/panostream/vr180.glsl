@@ -58,6 +58,12 @@ uniform float eyeWidthFraction;
 uniform float eyeHeightFraction;
 #endif
 
+#if defined(IN_VS) && !defined(WITH_INTERMEDIATE) || defined(IN_TES) && !defined(WITH_GS) || defined(IN_GS)
+out float fogDist;
+#else
+#define NO_FOG
+#endif
+
 struct Vert {
     vec4 pos;
     vec4 color;
@@ -103,6 +109,11 @@ vec4 vr180Projection(mat4 projectionMatrix, vec4 pos) {
         // Flip space back to OpenGL convention (negative z is forward)
         pos.z *= -1.0;
     }
+
+    #ifndef NO_FOG
+    // Set fog distance
+    fogDist = length(pos.xyz);
+    #endif
 
     // Transform to screen space
     pos = projectionMatrix * pos;

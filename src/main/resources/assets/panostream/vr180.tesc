@@ -1,4 +1,5 @@
 #version 400
+#define IN_TCS
 
 #ifdef NO_TESSELLATION
 #error "Cannot use NO_TESSELLATION with TCS"

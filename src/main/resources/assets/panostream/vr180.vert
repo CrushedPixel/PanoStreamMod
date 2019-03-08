@@ -1,4 +1,5 @@
 #version 150 compatibility
+#define IN_VS
 
 #ifdef DRAW_INSTANCED
 int renderPass;
@@ -100,5 +101,4 @@ void main() {
     lightMapCoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).st;
     vertColor = gl_Color;
     #endif
-    gl_FogFragCoord = length(pos.xyz);
 }

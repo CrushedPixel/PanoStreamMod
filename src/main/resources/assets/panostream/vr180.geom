@@ -1,4 +1,5 @@
 #version 150
+#define IN_GS
 
 #if defined(DRAW_INSTANCED) && !defined(WITH_TESS)
 flat in int renderPassV[];
