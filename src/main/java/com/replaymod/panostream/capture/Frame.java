@@ -29,7 +29,7 @@ public class Frame {
     public Frame(int width, int height, boolean useDepth) {
         // initialize the framebuffer
         composedFramebuffer = new Framebuffer(width, height, useDepth);
-        composedFramebuffer.setFramebufferColor(0.0F, 0.0F, 0.0F, 0.0F);
+        composedFramebuffer.setFramebufferColor(0.0F, 0.0F, 0.0F, 1.0F);
 
         // initialize the PBO array (PBOs are initialized in resize())
         pbos = new PixelBufferObject[GuiDebug.instance.pbos];

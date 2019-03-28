@@ -78,6 +78,7 @@ public class EquirectangularFrame extends Frame {
 
         OpenGlHelper.setActiveTexture(GL13.GL_TEXTURE8);
 
+        composedFramebuffer.framebufferClear();
         composedFramebuffer.bindFramebuffer(true);
 
         shaderProgram.use();
