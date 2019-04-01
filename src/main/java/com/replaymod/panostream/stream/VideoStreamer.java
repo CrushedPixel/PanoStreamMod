@@ -23,17 +23,17 @@ public class VideoStreamer {
     @Getter
     private final StreamingThread streamingThread = new StreamingThread();
 
-    public void toggleStream() {
-        if (streamingThread.isStopping()) {
-            LOGGER.warn("Stream is already stopping!");
-            return;
-        }
+    public synchronized void toggleStream() {
+        if (streamingThread.isStopping()) return;
 
-        try {
-            if (!streamingThread.isActive()) startStream(PanoStreamMod.instance.getPanoStreamSettings());
-            else stopStream();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (streamingThread.isActive()) {
+            stopStream();
+        } else {
+            try {
+                startStream(PanoStreamMod.instance.getPanoStreamSettings());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

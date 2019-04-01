@@ -20,11 +20,12 @@ public class GuiOverlays extends Registerable<GuiOverlays> {
 
     private final Minecraft mc = Minecraft.getMinecraft();
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onOverlayRender(TickEvent.RenderTickEvent event) {
-        if(event.phase != TickEvent.Phase.END) return;
-        if(PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getState()
-                == StreamingThread.State.DISABLED) return;
+        if (event.phase != TickEvent.Phase.END) return;
+
+        final StreamingThread.State state = PanoStreamMod.instance.getVideoStreamer().getStreamingThread().state.get();
+        if (state == StreamingThread.State.DISABLED) return;
 
         GlStateManager.pushAttrib();
 
@@ -40,12 +41,13 @@ public class GuiOverlays extends Registerable<GuiOverlays> {
         int x = width - 10 - 16;
         int y = 10;
 
-        switch(PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getState()) {
+        switch (state) {
             case STREAMING:
+                // draw streaming icon
                 Gui.drawModalRectWithCustomSizedTexture(x, y, 0, 0, 16, 16, TEXTURE_SIZE, TEXTURE_SIZE);
                 break;
             case RECONNECTING:
-                int rotation = (int)(System.currentTimeMillis() % 1000) / 250 * 90;
+                int rotation = (int) (System.currentTimeMillis() % 1000) / 250 * 90;
                 GuiUtils.drawRotatedRectWithCustomSizedTexture(x, y, rotation, 0, 48, 16, 16, TEXTURE_SIZE, TEXTURE_SIZE);
                 GuiUtils.drawCenteredString(String.format("%s/%s",
                         PanoStreamMod.instance.getVideoStreamer().getStreamingThread().getReconnectionAttempts(),
@@ -55,7 +57,7 @@ public class GuiOverlays extends Registerable<GuiOverlays> {
                 long diff = System.currentTimeMillis() - PanoStreamMod.instance.getVideoStreamer()
                         .getStreamingThread().getFinishTime();
 
-                //stays visible for 5 seconds, then disappears over 2 seconds
+                // stays visible for 5 seconds, then disappears over 2 seconds
                 float opacity = 1 - (Math.max(0, Math.min(1, (diff - 5000) / 2000f)));
 
                 GlStateManager.pushAttrib();

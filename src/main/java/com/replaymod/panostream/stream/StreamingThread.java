@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class StreamingThread {
 
@@ -35,6 +36,9 @@ public class StreamingThread {
 
     private ByteArrayOutputStream ffmpegLog = new ByteArrayOutputStream(4096);
 
+    /**
+     * Set to true to indicate that streaming should be stopped.
+     */
     private AtomicBoolean stopWriting = new AtomicBoolean(false);
 
     private AtomicBoolean active = new AtomicBoolean(false);
@@ -42,8 +46,7 @@ public class StreamingThread {
     @Getter
     private long finishTime;
 
-    @Getter
-    private State state = State.DISABLED;
+    public final AtomicReference<State> state = new AtomicReference<>(State.DISABLED);
 
     @Getter
     private int reconnectionAttempts;
@@ -55,7 +58,7 @@ public class StreamingThread {
 
     private ConcurrentLinkedQueue<ByteBuffer> frameQueue;
 
-    public synchronized boolean isActive() {
+    public boolean isActive() {
         return active.get();
     }
 
@@ -63,11 +66,10 @@ public class StreamingThread {
         return stopWriting.get() && isActive();
     }
 
-    public void streamToFFmpeg(VideoStreamer videoStreamer, boolean vr180, List<String> command) {
+    public synchronized void streamToFFmpeg(VideoStreamer videoStreamer, boolean vr180, List<String> command) {
         Preconditions.checkState(!active.get());
-        stopWriting.set(false);
-
         active.set(true);
+        stopWriting.set(false);
 
         Minecraft.getMinecraft().addScheduledTask(() -> {
             // destroy the old panoramicFrameCapturer if existent
@@ -85,7 +87,7 @@ public class StreamingThread {
             }
 
             new Thread(() -> {
-                // start the EquirectangularFrameCapturer
+                // start the FrameCapturer
                 boolean result = false;
                 reconnectionAttempts = 0;
 
@@ -98,11 +100,11 @@ public class StreamingThread {
                     }
 
                     if (!result) {
-                        state = State.RECONNECTING;
+                        state.set(State.RECONNECTING);
                     }
                 }
 
-                state = result ? State.DISABLED : State.FAILED;
+                state.set(result ? State.DISABLED : State.FAILED);
                 finishTime = System.currentTimeMillis();
 
                 active.set(false);
@@ -111,10 +113,9 @@ public class StreamingThread {
     }
 
     public void offerFrame(ByteBuffer buf) {
-        Preconditions.checkState(active.get());
-        Preconditions.checkState(!stopWriting.get());
+        if (!active.get()) return;
 
-        //if the frameQueue is too full, we remove one element before adding our new element
+        // if the frameQueue is too full, we remove one element before adding our new element
         if (frameQueue.size() > MAX_FRAME_BUFFER) {
             ByteBufferPool.release(frameQueue.poll());
         }
@@ -164,10 +165,10 @@ public class StreamingThread {
                 channel.write(buffer);
                 ByteBufferPool.release(buffer);
 
-                // if two frames have been successfully written,
+                // if at least two frames have been successfully written,
                 // the pipe hasn't been closed after writing the first frame
-                if (framesWritten++ > 1) {
-                    state = State.STREAMING;
+                if (++framesWritten >= 2) {
+                    state.set(State.STREAMING);
                     reconnectionAttempts = 0;
                 }
             } catch (InterruptedException e) {
@@ -186,7 +187,7 @@ public class StreamingThread {
             e.printStackTrace();
         }
 
-        //gently end the FFMPEG process
+        // gently end the FFMPEG process
         long startTime = System.nanoTime();
         long rem = TimeUnit.SECONDS.toNanos(30);
         do {

@@ -32,7 +32,7 @@ public class CustomKeyBindings extends Registerable<CustomKeyBindings> {
             Keyboard.KEY_F4, "panostream.title") {
         @Override
         public void onPressed() {
-            new Thread(() -> PanoStreamMod.instance.getVideoStreamer().toggleStream(), "ffmpeg-process").start();
+            PanoStreamMod.instance.getVideoStreamer().toggleStream();
         }
     };
 
