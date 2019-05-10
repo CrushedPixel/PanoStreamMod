@@ -46,7 +46,7 @@ void main() {
         p /= p.w;
         q /= q.w;
         float apparentSize = distance(p.xy, q.xy);
-        level = clamp(MAX_TESS_LEVEL * apparentSize, 1.0, MAX_TESS_LEVEL);
+        level = clamp(MAX_TESS_LEVEL * apparentSize, 1.0, float(MAX_TESS_LEVEL));
     }
 
     // Need to use if-cascade here because otherwise I seem to be hitting
