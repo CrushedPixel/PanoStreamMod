@@ -9,6 +9,7 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.opengl.GL40;
+import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 
@@ -20,7 +21,7 @@ public class OFMixinGlStateManager {
      * @reason same as MixinGlStateManager#glDrawArrays but for Optifine's "Render Regions" feature
      * @author johni0702
      */
-    @SuppressWarnings("OverwriteTarget") // only there if Optifine is installed
+    @Dynamic
     @Overwrite(remap = false)
     public static void glMultiDrawArrays(int mode, IntBuffer first, IntBuffer count) {
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();

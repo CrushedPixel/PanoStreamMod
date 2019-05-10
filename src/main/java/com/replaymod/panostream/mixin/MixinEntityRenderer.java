@@ -43,7 +43,7 @@ public class MixinEntityRenderer {
         }
 
         //undoing the glTranslate call in the orientCamera method
-        GlStateManager.translate(0.0F, 0.0F, 0.1F);
+        //GlStateManager.translate(0.0F, 0.0F, 0.1F);
     }
 
     @Redirect(method = "setupCameraTransform", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", remap = false))

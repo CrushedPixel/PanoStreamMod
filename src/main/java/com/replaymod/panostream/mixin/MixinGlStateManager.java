@@ -29,7 +29,7 @@ public class MixinGlStateManager {
      *         Or, if we in single-pass mode, draw twice (unless we're also using GS Instancing).
      * @author johni0702
      */
-    @Overwrite
+    @Overwrite(remap = false)
     public static void glDrawArrays(int mode, int first, int count) {
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
         if (capturer != null && !inGlNewList) {

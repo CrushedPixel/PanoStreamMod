@@ -10,9 +10,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.shader.Framebuffer;
-import net.minecraft.entity.Entity;
 import net.minecraftforge.client.ForgeHooksClient;
+import net.minecraftforge.client.event.EntityViewRenderEvent;
 import net.minecraftforge.client.event.RenderHandEvent;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
@@ -28,11 +29,21 @@ public class EquirectangularFrameCapturer extends FrameCapturer {
 
     private final EmptyGuiScreen emptyGuiScreen = new EmptyGuiScreen();
 
+    private float cameraPitch, cameraYaw, cameraRoll;
+
     public EquirectangularFrameCapturer(int frameSize, int fps, VideoStreamer videoStreamer) {
         super(fps, videoStreamer);
+        MinecraftForge.EVENT_BUS.register(this);
 
         equirectangularFrame = new EquirectangularFrame(frameSize);
         ScaledResolutionUtil.setWorldAndResolution(emptyGuiScreen, frameSize, frameSize);
+    }
+
+    @SubscribeEvent
+    public void onCameraSetup(EntityViewRenderEvent.CameraSetup event) {
+        cameraPitch = event.getPitch();
+        cameraYaw = event.getYaw();
+        cameraRoll = event.getRoll();
     }
 
     @Override
@@ -59,6 +70,9 @@ public class EquirectangularFrameCapturer extends FrameCapturer {
 
         mc.displayWidth = mc.displayHeight = equirectangularFrame.getFrameSize();
 
+        float yawCorrection = stabilize ? (float) Math.toRadians(cameraYaw) : 0;
+        float pitchCorrection = stabilize ? (float) Math.toRadians(cameraPitch) : 0;
+
         for (int i = 0; i < 6; i++) {
             CaptureState.setOrientation(Orientation.values()[i]);
 
@@ -68,15 +82,6 @@ public class EquirectangularFrameCapturer extends FrameCapturer {
             renderOverlays(mouseX, mouseY);
 
             Frame.unbindFramebuffer();
-        }
-
-        float yawCorrection = 0;
-        float pitchCorrection = 0;
-
-        Entity viewEntity = mc.getRenderViewEntity();
-        if (stabilize && viewEntity != null) {
-            yawCorrection = (float) Math.toRadians(viewEntity.rotationYaw);
-            pitchCorrection = (float) Math.toRadians(viewEntity.rotationPitch);
         }
 
         mc.displayWidth = widthBefore;
@@ -117,7 +122,7 @@ public class EquirectangularFrameCapturer extends FrameCapturer {
             if (mc.player != null) mc.ingameGUI.renderGameOverlay(mc.timer.renderPartialTicks);
             if (mc.currentScreen != null) {
                 CaptureState.setDistortGUI(true);
-                mc.entityRenderer.setupOverlayRendering(); //re-setup overlay rendering with distortion enabled
+                mc.entityRenderer.setupOverlayRendering(); // re-setup overlay rendering with distortion enabled
                 CaptureState.setDistortGUI(false);
                 GlStateManager.clear(GL11.GL_DEPTH_BUFFER_BIT);
                 ForgeHooksClient.drawScreen(mc.currentScreen, mouseX, mouseY, mc.timer.renderPartialTicks);
