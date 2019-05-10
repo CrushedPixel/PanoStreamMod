@@ -29,7 +29,7 @@ public class MixinGlStateManager {
      *         Or, if we in single-pass mode, draw twice (unless we're also using GS Instancing).
      * @author johni0702
      */
-    @Overwrite(remap = false)
+    @Overwrite
     public static void glDrawArrays(int mode, int first, int count) {
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
         if (capturer != null && !inGlNewList) {
@@ -95,7 +95,7 @@ public class MixinGlStateManager {
         }
     }
 
-    @Redirect(method = "viewport", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glViewport(IIII)V"))
+    @Redirect(method = "viewport", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/GL11;glViewport(IIII)V", remap = false))
     private static void singlePassViewport(int x, int y, int width, int height) {
         Minecraft mc = Minecraft.getMinecraft();
         VR180FrameCapturer capturer = VR180FrameCapturer.getActive();
