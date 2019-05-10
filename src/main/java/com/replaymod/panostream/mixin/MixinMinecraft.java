@@ -45,10 +45,15 @@ public class MixinMinecraft {
     @Redirect(method = "createDisplay", at = @At(value = "INVOKE", target = "Lorg/lwjgl/opengl/Display;create(Lorg/lwjgl/opengl/PixelFormat;)V", remap = false))
     private void createDisplay(PixelFormat pixelFormat) throws LWJGLException {
         try {
-            Display.create(pixelFormat, new ContextAttribs(3, 2).withProfileCompatibility(true));
+            Display.create(pixelFormat, new ContextAttribs(4, 0).withProfileCompatibility(true));
         } catch (LWJGLException e) {
-            LOGGER.error("Failed to create OpenGL 3.2 Compatibility Profile, Geometry Shaders will be unavailable:", e);
-            Display.create(pixelFormat);
+            LOGGER.error("Failed to create OpenGL 4.0 Compatibility Profile, Tessellation Shaders will be unavailable:", e);
+            try {
+                Display.create(pixelFormat, new ContextAttribs(3, 2).withProfileCompatibility(true));
+            } catch (LWJGLException e1) {
+                LOGGER.error("Failed to create OpenGL 3.2 Compatibility Profile, Geometry Shaders will be unavailable:", e1);
+                Display.create(pixelFormat);
+            }
         }
     }
 }
