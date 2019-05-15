@@ -1,5 +1,6 @@
 {
   "required": false,
+  "plugin": "com.replaymod.panostream.coremod.PanoOFMixinPlugin",
   "package": "com.replaymod.panostream.mixin.optifine",
   "mixins": [
     "OFMixinGlStateManager",
