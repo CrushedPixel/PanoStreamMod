@@ -7,6 +7,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiIngame;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.math.Vec3d;
 import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Mixin;
@@ -38,6 +39,11 @@ public class MixinGuiIngame extends Gui {
                 capturer.forceLazyRenderState();
             }
 
+            Entity viewEntity = mc.getRenderViewEntity();
+            if (viewEntity == null) {
+                return;
+            }
+
             float oldZLevel = zLevel;
             zLevel = 0;
             GlStateManager.matrixMode(GL11.GL_PROJECTION);
@@ -47,10 +53,13 @@ public class MixinGuiIngame extends Gui {
 
             mc.entityRenderer.setupCameraTransform(mc.timer.renderPartialTicks, 2);
 
-            Vec3d hitPos = mc.objectMouseOver.hitVec;
-            Vec3d cameraPos = mc.getRenderViewEntity().getPositionEyes(mc.timer.renderPartialTicks);
-            double dist = hitPos.distanceTo(cameraPos);
-            GlStateManager.translate(0.0, mc.getRenderViewEntity().getEyeHeight(), 0.0);
+            double dist = mc.playerController.getBlockReachDistance();
+            if (mc.objectMouseOver != null) {
+                Vec3d hitPos = mc.objectMouseOver.hitVec;
+                Vec3d cameraPos = viewEntity.getPositionEyes(mc.timer.renderPartialTicks);
+                dist = hitPos.distanceTo(cameraPos);
+            }
+            GlStateManager.translate(0.0, viewEntity.getEyeHeight(), 0.0);
             GlStateManager.rotate(-mc.getRenderManager().playerViewY, 0f, 1f, 0f);
             GlStateManager.rotate(mc.getRenderManager().playerViewX, 1f, 0f, 0f);
             GlStateManager.translate(0.0, 0.0, dist);
