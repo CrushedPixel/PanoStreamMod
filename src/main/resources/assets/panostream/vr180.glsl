@@ -64,6 +64,9 @@ out float fogDist;
 #define NO_FOG
 #endif
 
+#define PI 3.1415926538
+#define PI_HALF (3.1415926538 * 0.5)
+
 struct Vert {
     vec4 pos;
     vec4 color;
@@ -95,12 +98,14 @@ vec4 vr180Projection(mat4 projectionMatrix, vec4 pos) {
         // the geometry shader (which is used for nearby/big things) has an additional exact check.
         float theta = atan(pos.x, pos.z);
         if (abs(theta) < 2.5) {
-            // Distort for VR180 (dark magic)
+            // Distort for VR180
             float r = length(pos.xyz);
             vec3 ray = pos.xyz / r;
             float phi = asin(ray.y);
 
-            vec3 newRay = vec3(theta * thetaFactor, phi * phiFactor, zedFactor);
+            // Look at angles as a fraction of total FOV (180° or PI or PI/2 on each side) and then position them at
+            // the same fraction of the screen space.
+            vec3 newRay = vec3(theta / PI_HALF, phi / PI_HALF, 1.0);
             newRay = normalize(newRay) * r;
 
             pos = vec4(newRay, 1.0);
