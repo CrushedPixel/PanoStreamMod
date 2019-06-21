@@ -46,9 +46,6 @@ uniform int renderPass;
 #endif
 #endif
 uniform float ipd;
-uniform float thetaFactor;
-uniform float phiFactor;
-uniform float zedFactor;
 #ifdef ZERO_PASS
 uniform float inverseViewportAspect;
 uniform float mcAspect;

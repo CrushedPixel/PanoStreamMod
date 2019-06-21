@@ -116,18 +116,6 @@ public class VR180FrameCapturer extends FrameCapturer {
     private void loadPrograms() {
         // initialize VR180 shader
         try {
-            double localFov = Math.PI / 8; /*(90 / 2) * Math.PI / 180*/;
-            double aspect = 0.5;
-
-            double meshFov = (140 / 2) * Math.PI / 180;
-            double tanLocalFov = Math.tan(localFov);
-            double remoteFov = (100 / 2) * Math.PI / 180;
-            double tanRemoteFov = Math.tan(remoteFov);
-
-            double theta = aspect * tanLocalFov * meshFov;
-            double phi = tanLocalFov / meshFov;
-            double zed = aspect * tanRemoteFov;
-
             renderDistance = mc.gameSettings.renderDistanceChunks * 16;
 
             boolean multiPass = !zeroPass && !singlePass;
@@ -173,9 +161,6 @@ public class VR180FrameCapturer extends FrameCapturer {
 
             for (Program program : programs) {
                 program.use();
-                program.getUniformVariable("thetaFactor").set((float) theta);
-                program.getUniformVariable("phiFactor").set((float) phi);
-                program.getUniformVariable("zedFactor").set((float) zed);
                 program.getUniformVariable("texture").set(0);
                 program.getUniformVariable("lightMap").set(1);
                 program.stopUsing();
